@@ -1,0 +1,105 @@
+Sigrand SG16-PCI modem
+Linux driver for 2.6.x kernel, version 1.1, date 03.03.2006
+
+1. Introduction
+
+This driver supports Sigrand SG-16PCI modems under Linux operating system
+as standard ethernet-like netrwork interface.
+
+2. Installation
+
+To install driver you need Linux kernel 2.6.x source code, sysfs and driver 
+hotplug firmware loading support.
+
+Installation steps
+2.1. run `./configure [options]` ( ./configure --help to see list of available options ).
+     This program will check configuration of specified kernel and generate 
+     Makefile and configuration utility.
+     ( ./configure checks /proc/config.gz (if this option was set in the kernel).
+       If you compile driver not for current kernel, use option --no-proc-cfg 
+       of configure script. 
+       If /proc/config.gz is missing, ./configure use <Linux-Kernel-Path>/.config 
+       file to ensure that necessary options in kernel are switched on, so if 
+       your .config file does not respond to real configuration of kernel,
+       simply set those options by `make menuconfig` without any kernel compilation )
+2.2. `make install`
+
+After installation you will have:
+ - driver sg16lan.ko, installed in 
+   /lib/modules/<KERNELVERSION>/kernel/drivers/net  directory
+ - configuration utility sg16cfg, installed in /sbin 
+ - firmware in firmware dir ( by default - /lib/firmware, can be changed with
+   ./configure script )
+
+3. Firmware
+There are two firmware available in current distributive:
+ - v530s:       max rate: 4608 Kbis/s
+                auto rate selection ( up to 2304 Kbit/s )
+ - v530e:       max rate: 6016 Kbit/s
+                no autorate available
+		remote slave configuration ( by master )		
+
+By default v530e firmware installed. If you want to install v530s - use 
+sg16cfg:
+	sg16cfg fwinst <path>
+
+4. Driver Configuration
+
+After you've loaded  module(using insmod command) you may see that few
+dsl* devices appear in your system( as much as Sigrand SG-16PCI modems you
+have).
+
+When driver starts by default it will download firmware during loading. You can 
+turn this feature off with `./configure --autostart-off` (see installation 
+section). Also at installation step you can change default modem settings, 
+which will be applied at driver loading.
+
+To change default modem settings:
+4.1. `ifconfig dslX down`  ( if it was up )
+4.2. use sg16cfg SG-16PCI configuration utility to change settings
+4.3. `ifconfig dslX up` ( for applying changes )
+
+MAC address assign:
+First nine digits of MAC-address fixed and always 00:ff:01:a3:9, you may
+specify three last digits. If you don't specify them system will generate
+them randomly at boot time (not recommended). After successfull driver 
+configuration you should activate network interface using ifconfig command.
+
+sg16cfg utility has two additional parameters which turn on/off burst
+reading/writing mode on PCI bus(burst mode) : rbon/rboff, wbon/wboff.
+
+Configuration example:
+1) Static rate ( 6016 ), TCPAM32, master:
+    # ifconfig dslX down
+    # sg16cfg dslX rate 6016 tcpam32 master
+    # ifconfig dslX up
+2) Remote slave configuration ( by master ), rate 5696
+    a) Master-end configuration:
+    master # ifconfig dslX down
+    master # sg16cfg dslX cfg preact rate 5696 annex F master
+    master # ifconfig dslX up
+    b) Slave-end configuration:
+    slave # ifconfig dslX down
+    slave # sg16cfg dslX cfg preact annex F slave
+    slave # ifconfig dslX up
+Note: You MUST set annex to F for remote configuration up to 5696 kbps
+      
+    
+
+5. Driver statistics
+
+Besides the statistics shown by netstat and ifconfig you may see low-level
+driver's statistics. Execute `sg16cfg --help` for more information.
+
+6. Support
+
+Sigrand LLC
+6,Lavrenteva st.
+630090, Novosibirsk, Russia    
+Phones    (+7-383)-332-02-43
+          (+7-383)-332-94-37
+Phone/Fax (+7-383)-330-81-66
+web: http://www.sigrand.ru
+e-mail: support@sigrand.ru
+
+All drivers and updates available on website

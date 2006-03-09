@@ -1,0 +1,215 @@
+#!/bin/bash
+
+print_usage()
+{
+    echo "Usage: configure [options]"
+    echo "   --no-proc-cfg            - not try to use /proc/config.gz to findout"
+    echo "                              kernel configuration"       
+    echo "   --kernel-source=<path>   - spesify directory, containing kernel sources"
+    echo "   --autostart-off          - disable device start at boot time"
+    echo "   --firmware-path=<path>   - spesify directory, wich used to load firmware"    
+    echo "                              by default <path>=/lib/firmware"        
+
+    echo "You can choose default parameters of device:"    
+    echo "   --master             ( default: slave )"    
+    echo "   --rate=<value>       ( default: 128 )"        
+    echo "   --tcpam16 | --tcpam8 ( default: TCPAM32)"    
+    echo "   --autorate-on        ( default: off )"    
+    echo "   --read-burst-off     ( default: on )"    
+    echo "   --write-burst-off    ( default: on )"        
+    echo "   --crc16              ( default: CRC32 )"    
+    echo "   --fill-7e            ( default: logical 1 )"    
+    echo "   --inversion-on       ( default: off )"        
+}
+
+case "$*" in
+    *--help* | *-h*)
+	print_usage
+	exit
+	;;
+esac
+
+
+cflags=""
+pcfg="yes"
+for opt; do
+
+    case $opt in 
+    
+    --kernel-path=*)
+	    kpath=`echo "$opt" | sed 's/[-_a-zA-Z0-9]*=//'` 
+	    if [ ! -d $kpath ]; then
+		echo $0:" "$kpath": no such directory"
+	    	exit
+    	    fi
+	    ;;
+    --autostart-off)
+	    echo "no autostart"
+	    cflags=$cflags"-DAUTOSTART_OFF "
+	    ;;
+    --firmware-path=*)
+	    fpath=`echo "$opt" | sed 's/[-_a-zA-Z0-9]*=//'` 
+	    ;;
+    --master)
+	    if [ -z $master ]; then
+		cflags=$cflags"-DSG16_MASTER "	    
+		master="1"
+	    fi
+	    ;;
+    --rate=*)
+	    if [ -z $rate ]; then
+	        rate=`echo "$opt" | sed 's/[-_a-zA-Z0-9]*=//'` 	    
+		cflags=$cflags"-D'SG16_RATE="$rate"' "	    
+	    fi
+	    ;;		
+    --tcpam16)
+	    if [ -z $mod ]; then
+		cflags=$cflags"-DSG16_MOD=1 "    
+		mod="1"
+	    fi
+	    ;;
+    --tcpam8)
+	    if [ -z $mod ]; then
+		cflags=$cflags"-DSG16_MOD=2 "
+		mod="1"
+	    fi
+	    ;;
+    --autorate-on)
+	    if [ -z $autorate ]; then
+		cflags=$cflags"-DSG16_AUTOB "    
+		autorate="1"
+	    fi
+	    ;;
+    --read-burst-off)
+	    if [ -z $rboff ]; then
+		cflags=$cflags"-DSG16_NORBURST "    
+		rboff="1"
+	    fi
+	    ;;
+    --write-burst-off)
+	    if [ -z $wboff ]; then
+		cflags=$cflags"-DSG16_NOWBURST "    
+		wboff="1"
+	    fi		
+	    ;;
+    --crc16)
+	    if [ -z $crc16 ]; then    
+		cflags=$cflags"-DSG16_CRC16 "     
+		crc16="1"
+	    fi
+	    ;;
+    --fill-7e)
+	    if [ -z $f7e ]; then    
+		cflags=$cflags"-DSG16_FILE7E "    
+		f7e="1"
+	    fi
+	    ;;
+    --inversion-on)
+	    if [ -z $inv ]; then
+		cflags=$cflags"-DSG16_INV "    
+		inv="1"
+	    fi
+	    ;;
+    --no-proc-cfg)
+	    pcfg="no"
+	    ;;
+    esac
+done
+
+# Start with Makefile
+
+kver=`uname -r`
+
+# 1. Check that firmware loading module is configured in kernel
+if [ -z $kpath ]; then
+
+    if [  -d "/lib/modules/"$kver"/build" ]; then
+	kpath="/lib/modules/"$kver"/build"
+    elif [ -d "/usr/src/linux" ]; then
+	kpath="/usr/src/linux"	
+    else
+	echo $0:" cannot find kernel sources at: "$kpath1
+	echo $0:" cannot find kernel sources at: "$kpath2
+	exit	
+    fi
+    echo "Kernel path set to: "$kpath    
+fi
+
+if [ $pcfg = "yes" ]; then
+
+    if [ -f /proc/config.gz ]; then
+	zcat /proc/config.gz > config.tmp    
+        conf_file=`pwd`"/config.tmp"
+    else
+	echo "2"
+	conf_file=$kpath"/.config"
+    fi
+else
+    echo "3"
+    conf_file=$kpath"/.config"    
+fi
+
+sysfs_s=`grep 'CONFIG_SYSFS=y' $conf_file | grep -v ^#`
+sysfs_m=`grep 'CONFIG_SYSFS=m' $conf_file | grep -v ^#`
+fw_s=`grep 'CONFIG_FW_LOADER=y' $conf_file | grep -v ^#`
+fw_m=`grep 'CONFIG_FW_LOADER=m' $conf_file | grep -v ^#`
+
+rm -f ./config.tmp
+
+if [ -z $sysfs_s  ] && [ -z $sysfs_m ]; then
+    echo "ERROR:"
+    echo "You must enable sysfs support in your kernel"
+    echo "To do this:"
+    echo "   1. run \`make config\` or \`make menuconfig\`"
+    echo "   2. switch to File systems"
+    echo "   3. switch to Pseudo filesystems"    
+    echo "   4. enable (static or as module) sysfs filesystem support"    
+    echo "   5. recompile your kernel"
+    echo "   note: if compiled as module - you need \`modprobe firmware_class\`"    
+    echo "         before insert driver into kernel"
+    exit
+fi
+
+
+if [ -z $fw_s  ] && [ -z $fw_m ]; then
+    echo "ERROR:"
+    echo "You must enable firmware loader support in your kernel"
+    echo "To do this:"
+    echo "   1. run \`make config\` or \`make menuconfig\`"
+    echo "   2. switch to Device Drivers"
+    echo "   3. switch to Generic Driver Options"    
+    echo "   4. enable (static or as module) Hotplug Firmware loading support"    
+    echo "   5. recompile your kernel"
+    echo "   note: if compiled as module - you need \`modprobe firmware_class\`"    
+    echo "         before insert driver into kernel"
+    exit
+fi
+
+if [ ! -z $sysfs_m ]; then
+    echo "WARNING: sysfs supports in your kernel as module"
+fi
+
+if [ ! -z $fw_m ]; then
+    echo "WARNING: firmware loader supports in your kernel as module"
+fi
+
+if [ -z $fpath ]; then
+    fpath="/lib/firmware"
+fi
+
+if [ ! -d $fpath ]; then
+    mkdir $fpath
+    echo "WARNING: directory '"$fpath"'not exist - created"
+fi
+    
+# 2. Generating Makefile & config utility
+rm --preserve-root -f Makefile
+sed <Makefile.tmpl > Makefile \
+-e "s%@KERNSRC@%$kpath%g" \
+-e "s%@FW_PATH@%$fpath%g" \
+-e "s%@CFLAGS@%$cflags%g"
+
+rm --preserve-root -f sg16cfg
+sed <sg16cfg.tmpl > sg16cfg \
+-e "s%@FW_PATH@%$fpath%g" 
+chmod 744 sg16cfg 

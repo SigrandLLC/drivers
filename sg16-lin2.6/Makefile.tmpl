@@ -1,0 +1,22 @@
+obj-m := sg16lan.o
+KERNELVERSION=`uname -r`
+MODULEPATH=/lib/modules/$(KERNELVERSION)/kernel/drivers/net/sg16lan.ko
+CFLAGS+=@CFLAGS@
+
+sg16lan.ko: sg16lan.c
+	make -C @KERNSRC@ SUBDIRS=$(PWD) modules
+
+
+all: sg16lan.ko
+
+install: sg16lan.ko
+	install -m 644 sg16lan.ko $(MODULEPATH)
+	install -m 744 sg16cfg /sbin
+	cp ./firmware/sg16.bin @FW_PATH@/
+
+clean:
+	rm --preserve-root -f *.o*
+	rm --preserve-root -f *.ko*
+	rm --preserve-root -f *.mod.*
+	rm --preserve-root -f .sg16*
+	rm --preserve-root -f -R .tmp*
