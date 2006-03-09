@@ -69,6 +69,21 @@
 	Еще два параметра sg16cfg позволяют отключить режимы пакетного
 (burst) чтения и записи на шине PCI: rboff и wboff.
 
+Configuration example:
+1) Static rate ( 6016 ), TCPAM32, master:
+    # ifconfig dslX down
+    # sg16cfg dslX lrate=6016 tcpam32 master
+    # ifconfig dslX up
+2) Remote slave configuration ( by master ), rate 5696
+    a) Master-end configuration:
+	master # ifconfig dslX down
+	master # sg16cfg dslX cfg=preact lrate=5696 annex=F master
+	master # ifconfig dslX up
+b) Slave-end configuration:
+	slave # ifconfig dslX down
+	slave # sg16cfg dslX cfg=preact annex=F slave
+	slave # ifconfig dslX up
+Note: You MUST set annex to F for remote configuration up to 5696 kbps
 
 4. Просмотр статистики работы модема
 --------------------------------------

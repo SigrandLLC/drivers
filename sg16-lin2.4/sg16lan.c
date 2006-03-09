@@ -672,19 +672,12 @@ start_cx28975( struct net_device  *dev,  struct cx28975_cfg  cfg,  u8  *img )
 	if( (p->out_ack & 0x1f) != _ACK_BOOT_WAKE_UP )
 		return  -1;
 
-//	if( nl->state == NOT_LOADED )
-//	{
-
 	if( download_firmware( dev, img, cfg.firmw_len ) )
 	    return  -1;
-
-//	    else{
 
 	interruptible_sleep_on_timeout( &nl->wait_for_intr, HZ*10 );
 	if( (p->out_ack & 0x1f) != _ACK_OPER_WAKE_UP )
 	    return  -1;
-//	    }
-//	}
 
 //----_DSL_SYSTEM_ENABLE----//
 	t = cfg.master ? 1 : 9;

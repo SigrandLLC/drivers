@@ -62,9 +62,23 @@ sg16cfg utility has two additional parameters wich switch off packet
 reading/writing mode
 on PCI bus(burst mode) : rboff, wboff.
 
+Configuration example:
+1) Static rate ( 6016 ), TCPAM32, master:
+    # ifconfig dslX down
+    # sg16cfg dslX lrate=6016 tcpam32 master
+    # ifconfig dslX up
+2) Remote slave configuration ( by master ), rate 5696
+    a) Master-end configuration:
+        master # ifconfig dslX down
+	master # sg16cfg dslX cfg=preact lrate=5696 annex=F master
+	master # ifconfig dslX up
+    b) Slave-end configuration:
+	slave # ifconfig dslX down
+	slave # sg16cfg dslX cfg=preact annex=F slave
+	slave # ifconfig dslX up
+Note: You MUST set annex to F for remote configuration up to 5696 kbps
+
 4. Driver statistics
-
-
 Except statistics shown by netstat and ifconfig you may see low-level
 driver's statistics:
 
