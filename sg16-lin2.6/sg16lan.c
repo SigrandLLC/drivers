@@ -692,81 +692,6 @@ sg16_close( struct net_device  *ndev )
     return 0;
 }
 
-/* serve for transmit, but interface specific! */
-static int
-sg16_start_xmit( struct sk_buff *skb, struct net_device *ndev )
-{
-    struct net_local  *nl  = (struct net_local *)netdev_priv(ndev);	
-    unsigned long  flags;
-    dma_addr_t bus_addr;
-    struct sk_buff *nskb;
-    unsigned  cur_tbd;
-    unsigned pad;
-
-    if ( !netif_carrier_ok(ndev) ){
-	dev_kfree_skb_any( skb );
-	return 0;
-    }
-
-    if( nl->tail_xq == ((nl->head_xq - 1) & (XQLEN - 1)) ) {
-    	netif_stop_queue( ndev );
-	goto  err_exit;
-    }
-
-
-    /*
-     * we don't have to check if the descriptor queue was overflowed,
-     * because of XQLEN < 128
-     */
-     if( skb->len < ETHER_MIN_LEN )
-     {
-	pad = ETHER_MIN_LEN - skb->len;
-        /* if we have enough space just fill it with 0 and resize skb*/
-	/* If the skbuff is non linear tailroom is always zero.. */
-		 
-	if(skb_tailroom(skb) >= pad)
-	{
-     	    memset(skb->data + skb->len, 0, pad);
-	    skb->len = ETHER_MIN_LEN;			
-	}
-	else
-	{
-	    nskb = skb_copy_expand(skb, skb_headroom(skb), skb_tailroom(skb) + pad, GFP_ATOMIC);
-	    skb = nskb;
-	    if(skb)
-	    	memset(skb->data + skb->len, 0, pad);
-	    skb->len = ETHER_MIN_LEN;
-        }
-    }
-
-    /* Map the buffer for DMA */
-    bus_addr = dma_map_single(nl->dev,skb->data, skb->len , DMA_TO_DEVICE );
-
-    spin_lock_irqsave( &nl->xlock, flags );
-    nl->xq[ nl->tail_xq++ ] = skb;
-    nl->tail_xq &= (XQLEN - 1);
-    cur_tbd = ioread8( (iotype)&(nl->regs->LTDR)) & 0x7f;
-    iowrite32( cpu_to_le32( virt_to_bus(skb->data) ) , (iotype)&(nl->tbd[ cur_tbd ].address) ) ;
-    iowrite32( cpu_to_le32( skb->len | LAST_FRAG ),(iotype)&(nl->tbd[ cur_tbd ].length ) ) ;
-    cur_tbd = (cur_tbd + 1) & 0x7f;
-    iowrite8(cur_tbd,(iotype)&(nl->regs->LTDR));
-
-    /*
-     * Probably, it's the best place to increment statistic counters
-     * though those frames hasn't been actually transferred yet.
-     */
-    ++nl->in_stats.sent_pkts;
-    ++nl->stats.tx_packets;
-    nl->stats.tx_bytes += skb->len;
-    ndev->trans_start = jiffies;
-
-    spin_unlock_irqrestore( &nl->xlock, flags );
-
-    return 0;
-err_exit:
-
-    return  -EBUSY;
-}
 
 static struct net_device_stats *
 sg16_get_stats( struct net_device  *dev )
@@ -995,8 +920,8 @@ shdsl_preactivation(struct net_local *nl)
     if( cfg->autob )
         parm[0] = 0x02 | 0x01<<4;	// In auto rate mode using only TCPAM16
     else if( cfg->remcfg ){
-	if( ( cfg->mod==0x00 || cfg->mod==0x01 ) 
-	    && cfg->master && cfg->annex==ANNEX_F ){
+	if( ( cfg->mod==0x00 || cfg->mod==0x01 ) &&
+		cfg->master && cfg->annex==ANNEX_F ){
 	    DEBUG_PRN("remcfg,master,tcpam(16,32)");
 	    parm[0] = 0x02 |(cfg->mod << 4);
 	}else{
@@ -1029,7 +954,7 @@ shdsl_preactivation(struct net_local *nl)
     parm[6] = 0x00;
     
     parm[7]=cfg->annex; // annex A,B,F
-    parm[8] = 0x01;	// i-bit mask (all bits)
+    parm[8] = 0xff;	// i-bit mask (all bits)
     if( shdsl_issue_cmd( nl, _DSL_PREACTIVATION_CFG, parm, 12 ) )
     	return  -EIO;
 
@@ -1150,12 +1075,12 @@ shdsl_interrupt( struct net_device  *ndev )
     if(  ioread8( (iotype)&(p->intr_host) ) != 0xfe )
     	return;
 
-    // inquiry answer 
     if( ioread8( (iotype)&(p->out_ack) ) & 0x80  )
     {
 	nl->link_state.expires = jiffies + HZ/2;    
 	add_timer( &(nl->link_state) );    
     }
+    // inquiry answer     
     else
     {
 	nl->irqret=ioread8( (iotype)&(p->out_ack) );
@@ -1212,6 +1137,82 @@ shdsl_link_chk( unsigned long data )
 /* --------------------------------------------------------------------------
  *   Functions, serving transmit-receive process   *
  * -------------------------------------------------------------------------- */
+
+static int
+sg16_start_xmit( struct sk_buff *skb, struct net_device *ndev )
+{
+    struct net_local  *nl  = (struct net_local *)netdev_priv(ndev);	
+    unsigned long  flags;
+    dma_addr_t bus_addr;
+    struct sk_buff *nskb;
+    unsigned  cur_tbd;
+    unsigned pad;
+
+    if ( !netif_carrier_ok(ndev) ){
+	dev_kfree_skb_any( skb );
+	return 0;
+    }
+
+    if( nl->tail_xq == ((nl->head_xq - 1) & (XQLEN - 1)) ) {
+    	netif_stop_queue( ndev );
+	goto  err_exit;
+    }
+
+
+    /*
+     * we don't have to check if the descriptor queue was overflowed,
+     * because of XQLEN < 128
+     */
+     if( skb->len < ETHER_MIN_LEN )
+     {
+	pad = ETHER_MIN_LEN - skb->len;
+        /* if we have enough space just fill it with 0 and resize skb*/
+	/* If the skbuff is non linear tailroom is always zero.. */
+		 
+	if(skb_tailroom(skb) >= pad)
+	{
+     	    memset(skb->data + skb->len, 0, pad);
+	    skb->len = ETHER_MIN_LEN;			
+	}
+	else
+	{
+	    nskb = skb_copy_expand(skb, skb_headroom(skb), skb_tailroom(skb) + pad, GFP_ATOMIC);
+	    skb = nskb;
+	    if(skb)
+	    	memset(skb->data + skb->len, 0, pad);
+	    skb->len = ETHER_MIN_LEN;
+        }
+    }
+
+    /* Map the buffer for DMA */
+    bus_addr = dma_map_single(nl->dev,skb->data, skb->len , DMA_TO_DEVICE );
+
+    spin_lock_irqsave( &nl->xlock, flags );
+    nl->xq[ nl->tail_xq++ ] = skb;
+    nl->tail_xq &= (XQLEN - 1);
+    cur_tbd = ioread8( (iotype)&(nl->regs->LTDR)) & 0x7f;
+    iowrite32( cpu_to_le32( virt_to_bus(skb->data) ) , (iotype)&(nl->tbd[ cur_tbd ].address) ) ;
+    iowrite32( cpu_to_le32( skb->len | LAST_FRAG ),(iotype)&(nl->tbd[ cur_tbd ].length ) ) ;
+    cur_tbd = (cur_tbd + 1) & 0x7f;
+    iowrite8(cur_tbd,(iotype)&(nl->regs->LTDR));
+
+    /*
+     * Probably, it's the best place to increment statistic counters
+     * though those frames hasn't been actually transferred yet.
+     */
+    ++nl->in_stats.sent_pkts;
+    ++nl->stats.tx_packets;
+    nl->stats.tx_bytes += skb->len;
+    ndev->trans_start = jiffies;
+
+    spin_unlock_irqrestore( &nl->xlock, flags );
+
+    return 0;
+err_exit:
+
+    return  -EBUSY;
+}
+
 
 static void
 recv_init_frames( struct net_device *dev )
@@ -1303,9 +1304,12 @@ xmit_free_buffs( struct net_device *dev )
     struct net_local  *nl  = (struct net_local *)netdev_priv(dev);		
     unsigned  cur_tbd = ioread8((iotype)&(nl->regs->CTDR));
     dma_addr_t bus_addr;
-    u8 delta=cur_tbd-nl->head_tdesc ;
 
     spin_lock( &nl->xlock );
+
+    if( netif_queue_stopped( dev )  &&  nl->head_tdesc != cur_tbd )
+	netif_wake_queue( dev );
+		    
     while( nl->head_tdesc != cur_tbd )
     {
 	/* unmap DMA memory */
@@ -1315,8 +1319,6 @@ xmit_free_buffs( struct net_device *dev )
 	nl->head_xq &= (XQLEN - 1);
 	nl->head_tdesc = (nl->head_tdesc + 1) & 0x7f;
     }
-    if( netif_queue_stopped( dev )  &&  delta )
-    	netif_wake_queue( dev );
     spin_unlock( &nl->xlock );
     return;
 }
