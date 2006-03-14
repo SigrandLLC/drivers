@@ -106,7 +106,7 @@ MODULE_VERSION("2.0");
 
 
 /*Debug parameters*/
-//#define DEBUG_ON
+#define DEBUG_ON
 
 #define DEBUG_PRN(x) 
 #ifdef DEBUG_ON
@@ -354,6 +354,13 @@ static ssize_t store_statistic( struct device *dev, ADDIT_ATTR const char *buff,
 static DEVICE_ATTR(statistic,0644,show_statistic,store_statistic);	
 
 
+//debug
+static ssize_t show_debug( struct device *dev, ADDIT_ATTR char *buf );
+static ssize_t store_debug( struct device *dev, ADDIT_ATTR const char *buff, size_t size );
+static DEVICE_ATTR(debug,0644,show_debug,store_debug);	
+
+
+
 /* pci-driver initialisation block */
 /*----------------------------------------------------------------------------*/
 
@@ -566,7 +573,6 @@ sg16_interrupt( int  irq,  void  *dev_id,  struct pt_regs  *regs )
 
 	u8  status = ioread8((iotype)&(nl->regs->SR));
 
-//	DEBUG_PRN1("status=%x\n",status);
 	if( status == 0 )
 		return IRQ_NONE;
 
@@ -642,7 +648,6 @@ sg16_open( struct net_device  *ndev )
 	if( shdsl_issue_cmd( nl, _DSL_RESET_SYSTEM, &t, 1 ) )
     	    return -EBUSY;
 
-	DEBUG_PRN1("%s, before wait\n",ndev->name);	    
 	if( !shdsl_ready(nl, _ACK_OPER_WAKE_UP )  )
 	{
 		printk(KERN_NOTICE"%s, firmware wasn't loaded\n",ndev->name);	    
@@ -790,7 +795,6 @@ shdsl_dload_fw(struct device *dev)
     iowrite8(XRST,(iotype)&(nl->regs->CRA));
     iowrite8(EXT,(iotype)&(nl->regs->IMR)); 
     udelay(10);
-    DEBUG_PRN("dload: fw file was getted\n");
     if( !shdsl_ready(nl,_ACK_BOOT_WAKE_UP) )
 	goto err_exit;
 
@@ -802,11 +806,9 @@ DEBUG_PRN("dload: start\n");
     for( i = 0, img_len=fw->size;  img_len >= 75;  i += 75, img_len -= 75 )
 	if( shdsl_issue_cmd( nl, _DSL_DOWNLOAD_DATA, fw->data + i, 75 ) )
     	goto err_exit;
-DEBUG_PRN("dload: data transfer\n");
     if( img_len
         &&  shdsl_issue_cmd( nl, _DSL_DOWNLOAD_DATA, fw->data + i, img_len ) )
     	goto err_exit;
-DEBUG_PRN("dload: tail data transfer\n");
     t = (cksum ^ 0xff) + 1;
     if( shdsl_issue_cmd( nl, _DSL_DOWNLOAD_END, (u8 *) &t, 1 ) )
     	goto err_exit;
@@ -921,13 +923,11 @@ shdsl_preactivation(struct net_local *nl)
         parm[0] = 0x02 | 0x01<<4;	// In auto rate mode using only TCPAM16
     else if( cfg->remcfg ){
 	if( ( cfg->mod==0x00 || cfg->mod==0x01 ) &&
-		cfg->master && cfg->annex==ANNEX_F ){
-	    DEBUG_PRN("remcfg,master,tcpam(16,32)");
+		cfg->master && cfg->annex==ANNEX_F )
 	    parm[0] = 0x02 |(cfg->mod << 4);
-	}else{
-	    DEBUG_PRN("remcfg,slave|| master,tcpam(8,4)");	    
+	else
 	    parm[0] = 0x02 | 0x01 << 4;
-	}
+	
     }
     else
         parm[0] = 0x02 | (cfg->mod << 4);
@@ -1101,6 +1101,7 @@ shdsl_link_chk( unsigned long data )
     struct net_local  *nl  =(struct net_local *)netdev_priv(ndev);	
     volatile struct cx28975_cmdarea  *p = nl->cmdp;
     struct timeval tv;    
+    u8 t;
 
     // Link state
     if( ioread8( (iotype)((u8*)p + 0x3c7) ) & 2 ) 
@@ -1116,6 +1117,8 @@ shdsl_link_chk( unsigned long data )
 	    iowrite8( CRC, (iotype)&(nl->regs->SR) );    			
 	    do_gettimeofday( &tv );
 	    nl->in_stats.last_time = tv.tv_sec;
+//	    t=0x08;
+//	    shdsl_issue_cmd( nl, _DSL_FR_RX_RESET, &t, 1 );
 	    netif_wake_queue( ndev );
 	    netif_carrier_on( ndev );
 	}
@@ -1137,6 +1140,8 @@ shdsl_link_chk( unsigned long data )
 /* --------------------------------------------------------------------------
  *   Functions, serving transmit-receive process   *
  * -------------------------------------------------------------------------- */
+static int flag2=0;
+
 
 static int
 sg16_start_xmit( struct sk_buff *skb, struct net_device *ndev )
@@ -1147,17 +1152,24 @@ sg16_start_xmit( struct sk_buff *skb, struct net_device *ndev )
     struct sk_buff *nskb;
     unsigned  cur_tbd;
     unsigned pad;
+static int flag=0;    
 
     if ( !netif_carrier_ok(ndev) ){
 	dev_kfree_skb_any( skb );
 	return 0;
     }
 
+    /* fix concurent racing in transmit */
+    spin_lock_irqsave( &nl->xlock, flags );
+
     if( nl->tail_xq == ((nl->head_xq - 1) & (XQLEN - 1)) ) {
+	DEBUG_PRN("xmit: queue is full\n");
+	DEBUG_PRN1("xmit: head_xq=%u\n",nl->head_xq);    
+	DEBUG_PRN1("xmit: tail_xq=%u\n",nl->tail_xq);        
+	flag2=1;
     	netif_stop_queue( ndev );
 	goto  err_exit;
     }
-
 
     /*
      * we don't have to check if the descriptor queue was overflowed,
@@ -1187,7 +1199,7 @@ sg16_start_xmit( struct sk_buff *skb, struct net_device *ndev )
     /* Map the buffer for DMA */
     bus_addr = dma_map_single(nl->dev,skb->data, skb->len , DMA_TO_DEVICE );
 
-    spin_lock_irqsave( &nl->xlock, flags );
+
     nl->xq[ nl->tail_xq++ ] = skb;
     nl->tail_xq &= (XQLEN - 1);
     cur_tbd = ioread8( (iotype)&(nl->regs->LTDR)) & 0x7f;
@@ -1209,7 +1221,7 @@ sg16_start_xmit( struct sk_buff *skb, struct net_device *ndev )
 
     return 0;
 err_exit:
-
+    spin_unlock_irqrestore( &nl->xlock, flags );
     return  -EBUSY;
 }
 
@@ -1305,10 +1317,17 @@ xmit_free_buffs( struct net_device *dev )
     unsigned  cur_tbd = ioread8((iotype)&(nl->regs->CTDR));
     dma_addr_t bus_addr;
 
+if( flag2 )
+    DEBUG_PRN("xmit_free_bufs: queue was stopped\n");    
+
+
     spin_lock( &nl->xlock );
 
-    if( netif_queue_stopped( dev )  &&  nl->head_tdesc != cur_tbd )
-	netif_wake_queue( dev );
+    if( netif_queue_stopped( dev )  &&  nl->head_tdesc != cur_tbd ){
+	DEBUG_PRN("xmit_free_bufs: wake queue\n");
+	flag2=0;
+    	netif_wake_queue( dev );
+    }
 		    
     while( nl->head_tdesc != cur_tbd )
     {
@@ -1319,6 +1338,7 @@ xmit_free_buffs( struct net_device *dev )
 	nl->head_xq &= (XQLEN - 1);
 	nl->head_tdesc = (nl->head_tdesc + 1) & 0x7f;
     }
+
     spin_unlock( &nl->xlock );
     return;
 }
@@ -1331,17 +1351,20 @@ xmit_free_buffs( struct net_device *dev )
 static void
 sg16_tx_timeout( struct net_device  *ndev )
 {
-	struct net_local  *nl  = (struct net_local *)netdev_priv(ndev);		
-
-	printk( KERN_ERR "%s: transmit timeout\n", ndev->name );
-
-	if( ioread8( (iotype)&(nl->regs->SR)) & TXS )
-	{
-	    iowrite8( TXS,(iotype)&(nl->regs->SR));
-	    printk( KERN_ERR "%s: interrupt posted but not delivered\n",
-			ndev->name );
-	}
-	xmit_free_buffs( ndev );
+    struct net_local  *nl  = (struct net_local *)netdev_priv(ndev);		
+    
+    printk( KERN_ERR "%s: transmit timeout\n", ndev->name );
+DEBUG_PRN1("tx_tout: head_xq=%u\n",nl->head_xq);
+DEBUG_PRN1("tx_tout: tail_xq=%u\n",nl->tail_xq);
+    if( ioread8( (iotype)&(nl->regs->SR)) & TXS )
+    {
+        iowrite8( TXS,(iotype)&(nl->regs->SR));
+        printk( KERN_ERR "%s: interrupt posted but not delivered\n",
+    		ndev->name );
+    }
+    xmit_free_buffs( ndev );
+DEBUG_PRN1("tx_tout: head_xq=%u\n",nl->head_xq);
+DEBUG_PRN1("tx_tout: tail_xq=%u\n",nl->tail_xq);
 }
 
 
@@ -1454,7 +1477,9 @@ init_sg16_in_sysfs(struct device *dev)
     //stat
     device_create_file(dev,&dev_attr_state);        
     device_create_file(dev,&dev_attr_statistic);        
-    	
+    //debug
+    device_create_file(dev,&dev_attr_debug);                	
+
     return 0;
 }
 
@@ -1482,6 +1507,8 @@ del_sg16_from_sysfs(struct device *dev)
     //stat
     device_remove_file(dev,&dev_attr_state);        
     device_remove_file(dev,&dev_attr_statistic);        
+    //debug
+    device_remove_file(dev,&dev_attr_debug);            
 }
 
 /* rate attributes */
@@ -2175,3 +2202,60 @@ store_statistic( struct device *dev, ADDIT_ATTR const char *buf, size_t size )
     return size;
 }
 
+/* debug */
+static u8 mem_ret[PAGE_SIZE]="";
+
+static ssize_t
+show_debug( struct device *dev, ADDIT_ATTR char *buf ) 
+{
+    strncat(buf,mem_ret,PAGE_SIZE);
+    return strlen(buf);
+}
+
+static ssize_t
+store_debug( struct device *dev, ADDIT_ATTR const char *buff, size_t size )
+{
+    struct net_local *nl=(struct net_local *)netdev_priv(dev_get_drvdata(dev));
+    volatile struct cx28975_cmdarea  *p = nl->cmdp;    
+    u8 cmd,args[200],tmp1;
+    u16 len;
+    int i=0;
+    char *endp,*ptr,bf[PAGE_SIZE];
+    
+
+    if( !size )	return size;
+    
+    len= (PAGE_SIZE-1 > size) ? size : PAGE_SIZE-1;
+    strncpy(bf,buff,len);
+    bf[len]=0;
+
+    ptr=bf;
+    cmd=simple_strtoul( ptr,&endp,16);
+DEBUG_PRN1("DEBUG: cmd=%x\n",cmd);    
+DEBUG_PRN1("DEBUG: endp=%x\n",endp);    
+
+    while( ( ptr-bf < len) && *endp ){
+	ptr=endp;
+	while( (ptr-bf <len) && ( *ptr<'0' || *ptr>'9')  )
+	    ptr++;
+	if( (ptr-bf)>=len )
+	    break;
+	args[i]=(u8)simple_strtoul( ptr,&endp,16);
+DEBUG_PRN1("DEBUG: args[i]=%x\n",args[i]);    	
+
+	i++;
+    }
+DEBUG_PRN1("DEBUG: i=%d\n",i);    		
+    if( shdsl_issue_cmd(nl,cmd,args,i) ){
+	sprintf(mem_ret,"cmd: error");
+	return size;
+    }
+    
+    sprintf(mem_ret,"cmd: %x",cmd);
+    for( i=0;i<(p->out_length);i++){
+	tmp1 = ioread8( (iotype)&(p->out_data) +i );
+	sprintf(bf," %x",tmp1);
+	strcat(mem_ret,bf);
+    }
+    return size;
+}
