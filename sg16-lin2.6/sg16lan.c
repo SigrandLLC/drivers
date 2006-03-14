@@ -2252,7 +2252,7 @@ DEBUG_PRN1("DEBUG: i=%d\n",i);
     }
     
     sprintf(mem_ret,"cmd: %x",cmd);
-    for( i=0;i<(p->out_length);i++){
+    for( i=0;i<(p->out_length)+1;i++){
 	tmp1 = ioread8( (iotype)&(p->out_data) +i );
 	sprintf(bf," %x",tmp1);
 	strcat(mem_ret,bf);
