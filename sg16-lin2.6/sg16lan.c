@@ -106,7 +106,7 @@ MODULE_VERSION("2.0");
 
 
 /*Debug parameters*/
-#define DEBUG_ON
+//#define DEBUG_ON
 
 #define DEBUG_PRN(x) 
 #ifdef DEBUG_ON
@@ -119,6 +119,8 @@ MODULE_VERSION("2.0");
 #undef DEBUG_PRN1
 #define DEBUG_PRN1(x, param) printk(KERN_NOTICE x, param );
 #endif
+
+//static int FLG=0;
 
 /* Internal consts */
 #define EFWDLOAD 0x20
@@ -455,7 +457,7 @@ sg16_init_one( struct pci_dev  *pdev,  const struct pci_device_id  *ent )
 	else
 	{
 	    /* Starting device activation */
-            t=2;
+            t=0x42;
 	    if( ( err=shdsl_issue_cmd(nl,_DSL_ACTIVATION,&t,1) ) )
     		return -EIO;
 	    nl->shdsl_cfg.need_preact=0;
@@ -659,7 +661,7 @@ sg16_open( struct net_device  *ndev )
 		return -EBUSY;
 	}
         /* Starting device activation */
-	t=2;
+	t=0x42;
         if( ( err=shdsl_issue_cmd(nl,_DSL_ACTIVATION,&t,1) ) )
 	    return -EIO;
 	nl->shdsl_cfg.need_preact=0;	
@@ -1083,6 +1085,13 @@ shdsl_interrupt( struct net_device  *ndev )
     // inquiry answer     
     else
     {
+
+/*
+if( FLG ){
+    DEBUG_PRN("sg16_irq: reset fifo interrupt\n");
+    FLG=0;
+}
+*/	    
 	nl->irqret=ioread8( (iotype)&(p->out_ack) );
 	wake_up( &nl->wait_for_intr );	
     }
@@ -1102,6 +1111,9 @@ shdsl_link_chk( unsigned long data )
     volatile struct cx28975_cmdarea  *p = nl->cmdp;
     struct timeval tv;    
     u8 t;
+    u8  cksum = 0, tmp;
+    u8 *databuf = p->in_data;
+
 
     // Link state
     if( ioread8( (iotype)((u8*)p + 0x3c7) ) & 2 ) 
@@ -1110,6 +1122,7 @@ shdsl_link_chk( unsigned long data )
 	if( ( ioread8( (iotype)( (u8*)p + 0x3c0) ) & 0xc0) == 0x40 )
 	{
 	    DEBUG_PRN(KERN_NOTICE"Activate\n");
+	    // set hdlc registers
 	    iowrite8( ioread8( (iotype)&(nl->regs->CRB) ) & ~RXDE,
 			(iotype)&(nl->regs->CRB) );
 	    iowrite8( EXT | UFL | OFL | RXS | TXS ,
@@ -1117,8 +1130,20 @@ shdsl_link_chk( unsigned long data )
 	    iowrite8( CRC, (iotype)&(nl->regs->SR) );    			
 	    do_gettimeofday( &tv );
 	    nl->in_stats.last_time = tv.tv_sec;
-//	    t=0x08;
-//	    shdsl_issue_cmd( nl, _DSL_FR_RX_RESET, &t, 1 );
+	    //reset Rx FIFO	    
+	    iowrite8( 0xf0, (iotype)&(p->in_dest) );
+	    iowrite8( _DSL_FR_RX_RESET, (iotype)&(p->in_opcode ) );
+	    iowrite8( 0, (iotype)&(p->in_zero ) );
+	    iowrite8(0, (iotype)&(p->in_length ) );
+	    iowrite8( ( 0xf0 ^ _DSL_FR_RX_RESET ^ 0 ^ 0xaa ),(iotype)&(p->in_csum) ); 
+	    cksum ^= 0x8;
+	    iowrite8( 0x8,(iotype)&(p->in_data));	// only 1 byte per cycle!
+	    iowrite8( cksum^0xaa, (iotype)&(p->in_datasum) );
+	    iowrite8( _ACK_NOT_COMPLETE, (iotype)&(p->out_ack) );
+	    iowrite8( 0xfe, (iotype)&(p->intr_8051) );
+// for debug purposes
+//FLG=1;
+	    // enable packet receiving-transmitting
 	    netif_wake_queue( ndev );
 	    netif_carrier_on( ndev );
 	}
@@ -1140,9 +1165,6 @@ shdsl_link_chk( unsigned long data )
 /* --------------------------------------------------------------------------
  *   Functions, serving transmit-receive process   *
  * -------------------------------------------------------------------------- */
-static int flag2=0;
-
-
 static int
 sg16_start_xmit( struct sk_buff *skb, struct net_device *ndev )
 {
@@ -1152,7 +1174,6 @@ sg16_start_xmit( struct sk_buff *skb, struct net_device *ndev )
     struct sk_buff *nskb;
     unsigned  cur_tbd;
     unsigned pad;
-static int flag=0;    
 
     if ( !netif_carrier_ok(ndev) ){
 	dev_kfree_skb_any( skb );
@@ -1163,10 +1184,6 @@ static int flag=0;
     spin_lock_irqsave( &nl->xlock, flags );
 
     if( nl->tail_xq == ((nl->head_xq - 1) & (XQLEN - 1)) ) {
-	DEBUG_PRN("xmit: queue is full\n");
-	DEBUG_PRN1("xmit: head_xq=%u\n",nl->head_xq);    
-	DEBUG_PRN1("xmit: tail_xq=%u\n",nl->tail_xq);        
-	flag2=1;
     	netif_stop_queue( ndev );
 	goto  err_exit;
     }
@@ -1317,15 +1334,9 @@ xmit_free_buffs( struct net_device *dev )
     unsigned  cur_tbd = ioread8((iotype)&(nl->regs->CTDR));
     dma_addr_t bus_addr;
 
-if( flag2 )
-    DEBUG_PRN("xmit_free_bufs: queue was stopped\n");    
-
-
     spin_lock( &nl->xlock );
 
     if( netif_queue_stopped( dev )  &&  nl->head_tdesc != cur_tbd ){
-	DEBUG_PRN("xmit_free_bufs: wake queue\n");
-	flag2=0;
     	netif_wake_queue( dev );
     }
 		    
@@ -1354,8 +1365,6 @@ sg16_tx_timeout( struct net_device  *ndev )
     struct net_local  *nl  = (struct net_local *)netdev_priv(ndev);		
     
     printk( KERN_ERR "%s: transmit timeout\n", ndev->name );
-DEBUG_PRN1("tx_tout: head_xq=%u\n",nl->head_xq);
-DEBUG_PRN1("tx_tout: tail_xq=%u\n",nl->tail_xq);
     if( ioread8( (iotype)&(nl->regs->SR)) & TXS )
     {
         iowrite8( TXS,(iotype)&(nl->regs->SR));
@@ -1363,8 +1372,6 @@ DEBUG_PRN1("tx_tout: tail_xq=%u\n",nl->tail_xq);
     		ndev->name );
     }
     xmit_free_buffs( ndev );
-DEBUG_PRN1("tx_tout: head_xq=%u\n",nl->head_xq);
-DEBUG_PRN1("tx_tout: tail_xq=%u\n",nl->tail_xq);
 }
 
 
