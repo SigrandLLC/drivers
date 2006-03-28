@@ -1110,9 +1110,7 @@ shdsl_link_chk( unsigned long data )
     struct net_local  *nl  =(struct net_local *)netdev_priv(ndev);	
     volatile struct cx28975_cmdarea  *p = nl->cmdp;
     struct timeval tv;    
-    u8 t;
-    u8  cksum = 0, tmp;
-    u8 *databuf = p->in_data;
+    u8  cksum = 0;
 
 
     // Link state
@@ -1141,8 +1139,6 @@ shdsl_link_chk( unsigned long data )
 	    iowrite8( cksum^0xaa, (iotype)&(p->in_datasum) );
 	    iowrite8( _ACK_NOT_COMPLETE, (iotype)&(p->out_ack) );
 	    iowrite8( 0xfe, (iotype)&(p->intr_8051) );
-// for debug purposes
-//FLG=1;
 	    // enable packet receiving-transmitting
 	    netif_wake_queue( ndev );
 	    netif_carrier_on( ndev );
