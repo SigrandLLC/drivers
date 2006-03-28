@@ -1,5 +1,5 @@
 Sigrand SG16-PCI modem
-Linux driver for 2.6.x kernel, version 1.1, date 03.03.2006
+Linux driver for 2.6.x kernel, version 1.2, date 28.03.2006
 
 1. Introduction
 
@@ -32,14 +32,12 @@ After installation you will have:
    ./configure script )
 
 3. Firmware
-There are two firmware available in current distributive:
- - v530s:       max rate: 4608 Kbis/s
-                auto rate selection ( up to 2304 Kbit/s )
+There are one firmware available in current distributive:
  - v530e:       max rate: 6016 Kbit/s
                 no autorate available
 		remote slave configuration ( by master )		
 
-By default v530e firmware installed. If you want to install v530s - use 
+If you want to install different firmware - use 
 sg16cfg:
 	sg16cfg fwinst <path>
 
@@ -84,8 +82,6 @@ Configuration example:
     slave # ifconfig dslX up
 Note: You MUST set annex to F for remote configuration up to 5696 kbps
       
-    
-
 5. Driver statistics
 
 Besides the statistics shown by netstat and ifconfig you may see low-level
