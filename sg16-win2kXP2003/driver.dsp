@@ -43,7 +43,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /Gz /W4 /WX /Ox /Ot /Oa /Ow /Og /Oi /I "$(win2kddk)\inc\ddk" /I "$(win2kddk)\inc" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /Yu"common.h" /FD /c
+# ADD CPP /nologo /Gz /W4 /WX /Ox /Ot /Oa /Ow /Og /Oi /I "E:\NTDDK\inc\ddk" /I "E:\NTDDK\inc" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /Yu"common.h" /FD /c
 # SUBTRACT CPP /Os
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
@@ -54,7 +54,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /machine:I386
-# ADD LINK32 ndis.lib ntoskrnl.lib hal.lib /nologo /entry:"DriverEntry" /map /machine:I386 /nodefaultlib /out:"driver\Release/sbni16.sys" /libpath:"$(win2kddk)\lib" /subsystem:native /driver /ignore:4078
+# ADD LINK32 ndis.lib ntoskrnl.lib hal.lib /nologo /entry:"DriverEntry" /map /machine:I386 /nodefaultlib /out:"driver\Release/sg16pci.sys" /libpath:"E:\NTDDK\libfre\i386" /subsystem:native /driver /ignore:4078
 # SUBTRACT LINK32 /pdb:none
 
 !ELSEIF  "$(CFG)" == "driver - Win32 Debug"

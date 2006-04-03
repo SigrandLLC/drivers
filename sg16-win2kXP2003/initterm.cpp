@@ -116,8 +116,6 @@ AdapterDesc::~AdapterDesc (void) {
 
 
 
-
-
 //
 // Reset to initial state
 // ======================
@@ -126,9 +124,6 @@ AdapterDesc::~AdapterDesc (void) {
 void AdapterDesc::Reset (void) {
 
 }
-
-
-
 
 
 //
