@@ -24,7 +24,7 @@ DriverVer	= 12/01/2004,1.10.0.0
 
 [SourceDisksFiles]
 sg16pci.sys =50 
-cxfw.bin = 50
+sg16.bin = 50
 
 
 [Sigrand]
@@ -35,7 +35,7 @@ Characteristics = 0x84
 BusType         = 5
 AddReg		= SBNIPCI.ndi.reg, SBNI.ndi.reg, SBNI.ndi.param.reg
 ;AddReg		= SBNI.ndi.adv.param.reg
-CopyFiles	= SBNI.ndis5.CopyFiles,SBNI.cxfw.CopyFiles,SBNI.stat.CopyFiles
+CopyFiles	= SBNI.ndis5.CopyFiles,SBNI.sg16bin.CopyFiles,SBNI.stat.CopyFiles
 
 [SBNIPCI.NDI.Services]
 AddService 	= SG-16PCI, 2, SBNI.Service, common.EventLog
@@ -86,9 +86,9 @@ HKR,NDI\params\ConfigType\enum,1,,"Preact"
 
 HKR,NDI\params\AnnexType,ParamDesc,,"Annex"
 HKR,NDI\params\AnnexType,Type,,"enum"
-HKR,NDI\params\AnnexType,Default,,"0"
-HKR,NDI\params\AnnexType\enum,0,,"Annex A"
-HKR,NDI\params\AnnexType\enum,1,,"Annex B"
+HKR,NDI\params\AnnexType,Default,,"1"
+HKR,NDI\params\AnnexType\enum,1,,"Annex A"
+HKR,NDI\params\AnnexType\enum,2,,"Annex B"
 HKR,NDI\params\AnnexType\enum,3,,"Annex F"
 
 HKR,NDI\params\LineCode,ParamDesc,,"Line code"

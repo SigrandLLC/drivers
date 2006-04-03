@@ -154,20 +154,16 @@ NDIS_STATUS AdapterDesc::ReadConfiguration (NDIS_HANDLE ConfigHandle) {
 
   READ_IPARM (&CfgTypeStr);
 
-  if (Status == NDIS_STATUS_SUCCESS) {
+  if (Status == NDIS_STATUS_SUCCESS){
 
     ModemCfg.remcfg = !!INT_DATA (Parm);
-	Debug (7, NULL, "SG16: config, remcfg=%d",ModemCfg.remcfg);
   }
 
   NDIS_STRING const AnnexTypeStr = NDIS_STRING_CONST ("AnnexType");
 
   READ_IPARM (&AnnexTypeStr);
-
   if (Status == NDIS_STATUS_SUCCESS) {
     ModemCfg.annex = Annexes (INT_DATA (Parm));
-	Debug (7, NULL, "SG16: config, annex=%d",ModemCfg.annex);
-	
   }
 /* ----------- End --------------------------------*/
 

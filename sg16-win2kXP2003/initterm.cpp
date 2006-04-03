@@ -153,41 +153,34 @@ NDIS_STATUS AdapterDesc::CardStart (void) {
   PVOID firmw_img = NULL;
   NDIS_STATUS Status;
 
-  do {
+	do {
+		UINT firmw_len;
+		Assert (KeGetCurrentIrql () == PASSIVE_LEVEL);
+		NdisOpenFile (&Status, &handle, &firmw_len, &file_name, HighestAddr);
 
-    UINT firmw_len;
+		if (Status != NDIS_STATUS_SUCCESS) {
+			Debug (9, this, "CardStart:ERROR - NdisOpenFile (%X)", Status);
+DbgPrint("CS: err - ndisOpenFile\n");
+			break;
+		}
 
-    Assert (KeGetCurrentIrql () == PASSIVE_LEVEL);
+		FileOpen = true;
 
-    NdisOpenFile (&Status, &handle, &firmw_len, &file_name, HighestAddr);
+		NdisMapFile (&Status, &firmw_img, handle);
 
-    if (Status != NDIS_STATUS_SUCCESS) {
+		if (Status != NDIS_STATUS_SUCCESS) {
+			Debug (9, this, "CardStart:ERROR - NdisMapFile (%X)", Status);
+DbgPrint("CS: err - ndisMapFile\n");
+			break;
 
-      Debug (9, this, "CardStart:ERROR - NdisOpenFile (%X)", Status);
-
-      break;
-
-    }
-
-    FileOpen = true;
-
-    NdisMapFile (&Status, &firmw_img, handle);
-
-    if (Status != NDIS_STATUS_SUCCESS) {
-
-      Debug (9, this, "CardStart:ERROR - NdisMapFile (%X)", Status);
-
-      break;
-
-    }
+		}
 
     if (!start_cx28975 (firmw_img, firmw_len)) {
-
-      Status = NDIS_STATUS_FAILURE;
-
-      break;
-
+DbgPrint("CS: err - start_cx28975\n");
+		Status = NDIS_STATUS_FAILURE;
+		break;
     }
+
 
     StartTransceiver ();
 
@@ -474,170 +467,104 @@ void AdapterDesc::DestroyPools (void) {
 
 NDIS_STATUS AdapterDesc::InitDmaAndInt (void) {
 
-  Debug (0, this, "InitDmaAndInt: ENTER");
+	Debug (0, this, "InitDmaAndInt: ENTER");
 
-  Check ();
+	Check ();
 
-  NDIS_STATUS Status = NDIS_STATUS_FAILURE;
+	NDIS_STATUS Status = NDIS_STATUS_FAILURE;
 
-  do {
+	do{
+		LARGE_INTEGER PhysAddr = { 0, 0 };
+		PhysAddr.u.LowPart = MemoryWindowPhysAddr;
+		Status = NdisMMapIoSpace (&MemoryWindowAddr,DriverHandle,
+									PhysAddr,SG16_MEMSIZE);
+		
+		if (Status != NDIS_STATUS_SUCCESS) {
+			Debug (9, this, "RegisterAdapter:ERROR - NdisMMapIoSpace (%X)", Status);
+DbgPrint("InitDMAAndIRQ:RegisterAdapter:ERROR - NdisMMapIoSpace (%X)\n", Status);
+			break;
+		}
 
-    LARGE_INTEGER PhysAddr = { 0, 0 };
+		Debug (7, this, "I/O space mapped to %X", MemoryWindowAddr);
 
-    PhysAddr.u.LowPart = MemoryWindowPhysAddr;
+		TxDmaBuffer = (DmaBuffer *) (MemoryWindowAddr);
+		RxDmaBuffer = (DmaBuffer *) (PBYTE (MemoryWindowAddr) + 0x400);
+		HLDC = (HldcRegs *) (PBYTE (MemoryWindowAddr) + 0x800);
+		cmdp = (cx28975_cmdarea *) (PBYTE (MemoryWindowAddr) + 0xC00);
 
-    Status = NdisMMapIoSpace (
-      &MemoryWindowAddr,
-      DriverHandle,
-      PhysAddr,
-      SG16_MEMSIZE
-    );
-
-    if (Status != NDIS_STATUS_SUCCESS) {
-
-      Debug (9, this, "RegisterAdapter:ERROR - NdisMMapIoSpace (%X)", Status);
-
-      break;
-
-    }
-
-    Debug (7, this, "I/O space mapped to %X", MemoryWindowAddr);
-
-
-    TxDmaBuffer = (DmaBuffer *) (MemoryWindowAddr);
-    RxDmaBuffer = (DmaBuffer *) (PBYTE (MemoryWindowAddr) + 0x400);
-    HLDC = (HldcRegs *) (PBYTE (MemoryWindowAddr) + 0x800);
-    cmdp = (cx28975_cmdarea *) (PBYTE (MemoryWindowAddr) + 0xC00);
-
-
-    DmaMemSize = (XmtQueueLen + RcvQueueLen) * DMA_BUFFER_SIZE;
-
+		DmaMemSize = (XmtQueueLen + RcvQueueLen) * DMA_BUFFER_SIZE;
 
 #ifdef _DEBUG
-
-    NdisZeroMemory (TxDmaBuffer->BdArray, sizeof (TxDmaBuffer->BdArray));
-    NdisZeroMemory (RxDmaBuffer->BdArray, sizeof (RxDmaBuffer->BdArray));
-
+		NdisZeroMemory (TxDmaBuffer->BdArray, sizeof (TxDmaBuffer->BdArray));
+		NdisZeroMemory (RxDmaBuffer->BdArray, sizeof (RxDmaBuffer->BdArray));
 #endif
  
  
     // We must allocate map registers to use shared memory
+		Status = NdisMAllocateMapRegisters ( DriverHandle,0,NDIS_DMA_32BITS,
+												1,DmaMemSize );
 
-    Status = NdisMAllocateMapRegisters (
-      DriverHandle,
-      0,
-      NDIS_DMA_32BITS,
-      1,
-      DmaMemSize
-    );
+		if (Status != NDIS_STATUS_SUCCESS) {
+DbgPrint( "InitDMAAndIRQ:Cannot allocate map registers (%X)\n", Status);
+			Debug (9, this, "Cannot allocate map registers (%X)", Status);
+			break;
+		}
 
-    if (Status != NDIS_STATUS_SUCCESS) {
+		MapRegsAllocated = true;
+		Debug (7, this, "Allocated map registers");
+		NdisMAllocateSharedMemory ( DriverHandle, DmaMemSize, TRUE,
+									&DmaMemAddr, &DmaMemPhysAddr );
 
-      Debug (9, this, "Cannot allocate map registers (%X)", Status);
+		if (!DmaMemAddr) {
+DbgPrint( "InitDMAAndIRQ: Cannot allocate %u bytes of DMA memory\n", DmaMemSize);
+			Debug (9, this, "Cannot allocate %u bytes of DMA memory", DmaMemSize);
+			Status = NDIS_STATUS_RESOURCES;
+			break;
+		}
 
-      break;
+		Debug (7,this,"Allocated %u bytes of DMA mem (virt %X, phys %X)",DmaMemSize,
+						DmaMemAddr,DmaMemPhysAddr);
 
-    }
+		Status = CreatePools ();
 
-    MapRegsAllocated = true;
-
-    Debug (7, this, "Allocated map registers");
-
-
-    NdisMAllocateSharedMemory (
-      DriverHandle,
-      DmaMemSize,
-      TRUE,
-      &DmaMemAddr,
-      &DmaMemPhysAddr
-    );
-
-    if (!DmaMemAddr) {
-
-      Debug (9, this, "Cannot allocate %u bytes of DMA memory", DmaMemSize);
-
-      Status = NDIS_STATUS_RESOURCES;
-
-      break;
-
-    }
-
-    Debug (
-      7,
-      this,
-      "Allocated %u bytes of DMA mem (virt %X, phys %X)",
-      DmaMemSize,
-      DmaMemAddr,
-      DmaMemPhysAddr
-    );
+		if (Status != NDIS_STATUS_SUCCESS) {
+DbgPrint( "InitDMAAndIRQ: Create Pools err\n");
+			break;
+		}
 
 
-    Status = CreatePools ();
+		// interrupts are disabled until CardStart completed
+		Status = NdisMRegisterInterrupt ( &Interrupt,DriverHandle,InterruptNumber,
+										InterruptNumber,TRUE,TRUE,NdisInterruptLevelSensitive);
 
-    if (Status != NDIS_STATUS_SUCCESS) {
+		if (Status != NDIS_STATUS_SUCCESS) {
+			Debug (9, this, "Cannot register interrupt (%X)", Status);
+DbgPrint( "InitDMAAndIRQ: Create Pools err\n");
+			NdisWriteErrorLogEntry (DriverHandle,NDIS_ERROR_CODE_INTERRUPT_CONNECT,0);
+			break;
+		}
 
-      break;
+		Debug (7, this, "Registered interrupt %u", InterruptNumber);
 
-    }
+		InterruptRegistered = true;
 
+		Status = CardStart ();
+		if (Status != NDIS_STATUS_SUCCESS) {
+DbgPrint( "InitDMAAndIRQ: Cant Start Card\n");
+			NdisWriteErrorLogEntry (DriverHandle, Status, 0);
+			break;
+		}
+		HLDC->CTDR = HLDC->LTDR = HLDC->CRDR = HLDC->LRDR = 0;
+		Assert (Status == NDIS_STATUS_SUCCESS);
+	}while (False);
+	
+	if (Status != NDIS_STATUS_SUCCESS) {
+		TermDmaAndInt ();
+	}
 
-    // interrupts are disabled until CardStart completed
+	Debug (0, this, "InitDmaAndInt: EXIT");
 
-    Status = NdisMRegisterInterrupt (
-      &Interrupt,
-      DriverHandle,
-      InterruptNumber,
-      InterruptNumber,
-      TRUE,
-      TRUE,
-      NdisInterruptLevelSensitive
-    );
-
-    if (Status != NDIS_STATUS_SUCCESS) {
-
-      Debug (9, this, "Cannot register interrupt (%X)", Status);
-
-      NdisWriteErrorLogEntry (
-        DriverHandle,
-        NDIS_ERROR_CODE_INTERRUPT_CONNECT,
-        0
-      );
-
-      break;
-
-    }
-
-    Debug (7, this, "Registered interrupt %u", InterruptNumber);
-
-    InterruptRegistered = true;
-
-
-    Status = CardStart ();
-
-    if (Status != NDIS_STATUS_SUCCESS) {
-
-      NdisWriteErrorLogEntry (DriverHandle, Status, 0);
-
-      break;
-
-    }
-
-    HLDC->CTDR = HLDC->LTDR = HLDC->CRDR = HLDC->LRDR = 0;
-
-    Assert (Status == NDIS_STATUS_SUCCESS);
-
-  } while (False);
-
-  if (Status != NDIS_STATUS_SUCCESS) {
-
-    TermDmaAndInt ();
-
-  }
-
-  Debug (0, this, "InitDmaAndInt: EXIT");
-
-  return Status;
-
+	return Status;
 }
 
 
@@ -727,80 +654,57 @@ void AdapterDesc::TermDmaAndInt (void) {
 // ==============
 //
 
-NDIS_STATUS AdapterDesc::Init (
-  NDIS_HANDLE MPH,
-  NDIS_HANDLE WrapperConfigurationContext
-) {
+NDIS_STATUS AdapterDesc::Init (	NDIS_HANDLE MPH,
+								NDIS_HANDLE WrapperConfigurationContext)
+{
 
-  DriverHandle = MPH;
+	DriverHandle = MPH;
+	
+	NdisMRegisterAdapterShutdownHandler ( DriverHandle,this,
+										MiniportShutdownOuter);
 
-  NdisMRegisterAdapterShutdownHandler (
-    DriverHandle,
-    this,
-    MiniportShutdownOuter
-  );
+	NdisMSetAttributesEx (DriverHandle,NDIS_HANDLE (this),0,
+				NDIS_ATTRIBUTE_DESERIALIZE | NDIS_ATTRIBUTE_BUS_MASTER,
+				NdisInterfacePci);
 
-  NdisMSetAttributesEx (
-    DriverHandle,
-    NDIS_HANDLE (this),
-    0,
-    NDIS_ATTRIBUTE_DESERIALIZE | NDIS_ATTRIBUTE_BUS_MASTER,
-    NdisInterfacePci
-  );
+	NDIS_STATUS Status = NDIS_STATUS_FAILURE;
 
-  NDIS_STATUS Status = NDIS_STATUS_FAILURE;
+	do {
 
-  do {
+		NDIS_HANDLE ConfigHandle;
+		NdisOpenConfiguration (&Status, &ConfigHandle, WrapperConfigurationContext);
 
-    NDIS_HANDLE ConfigHandle;
+		if (Status != NDIS_STATUS_SUCCESS) {
+			Debug (9, this, "Cannot open configuration (%X)", Status);
+			Status = NDIS_STATUS_FAILURE;
+			break;
+		}
 
-    NdisOpenConfiguration (&Status, &ConfigHandle, WrapperConfigurationContext);
+		Status = ReadConfiguration (ConfigHandle);
+		NdisCloseConfiguration (ConfigHandle);
+		if (Status != NDIS_STATUS_SUCCESS) {
+			Debug (9, this, "Cannot read configuration (%X)", Status);
+			break;
+		}
 
-    if (Status != NDIS_STATUS_SUCCESS) {
+		Status = InitDmaAndInt ();
 
-      Debug (9, this, "Cannot open configuration (%X)", Status);
+		if (Status != NDIS_STATUS_SUCCESS) {
+DbgPrint("Init:cannot init DMA & INT\n");      
+		break;
+		}
 
-      Status = NDIS_STATUS_FAILURE;
+		Reset ();
 
-      break;
+		FillRcvQueue ();
 
-    }
+		Status = NDIS_STATUS_SUCCESS;
 
-    Status = ReadConfiguration (ConfigHandle);
+	}while (False);
 
-    NdisCloseConfiguration (ConfigHandle);
-
-    if (Status != NDIS_STATUS_SUCCESS) {
-
-      Debug (9, this, "Cannot read configuration (%X)", Status);
-
-      break;
-
-    }
-
-
-    Status = InitDmaAndInt ();
-
-    if (Status != NDIS_STATUS_SUCCESS) {
-
-      break;
-
-    }
-
-
-    Reset ();
-
-    FillRcvQueue ();
-
-    Status = NDIS_STATUS_SUCCESS;
-
-  } while (False);
-
-  if (Status != NDIS_STATUS_SUCCESS) {
-
-    Term ();
-
-  }
+	if (Status != NDIS_STATUS_SUCCESS) {
+		Term ();
+	}
 
   return Status;
 
