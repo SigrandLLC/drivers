@@ -150,7 +150,7 @@ NDIS_STATUS AdapterDesc::CardStart (void) {
 
   // read the 8051 program code
 
-  NDIS_STRING file_name = NDIS_STRING_CONST ("cxfw.bin");
+  NDIS_STRING file_name = NDIS_STRING_CONST ("sg16.bin");
 
   NDIS_HANDLE handle;
 

@@ -1,0 +1,208 @@
+;******************************************************************************
+;
+; NETSB16.INF
+;
+; Sigrand SG-16PCI-SHDSL PCI Modem Driver (NDIS 5.0)
+; for Windows 2000 and XP
+;
+; Copyright (c) Sigrand, LLC. 2002-2003.
+;
+;******************************************************************************
+
+[Version]
+Signature	="$Windows NT$"
+Class		= Net
+ClassGuid 	= {4D36E972-E325-11CE-BFC1-08002BE10318}
+Provider	= %V_PROVIDER%
+DriverVer	= 12/01/2004,1.10.0.0
+
+[Manufacturer]
+%V_Sigrand%	= Sigrand
+
+[SourceDisksNames]
+50="Sisgrand SG-16PCI Driver Disk",,0  
+
+[SourceDisksFiles]
+sg16pci.sys =50 
+cxfw.bin = 50
+
+
+[Sigrand]
+%SBNIPCI.Desc%=sbnipci.ndi,PCI\VEN_0055&DEV_009D
+
+[SBNIPCI.NDI]
+Characteristics = 0x84
+BusType         = 5
+AddReg		= SBNIPCI.ndi.reg, SBNI.ndi.reg, SBNI.ndi.param.reg
+;AddReg		= SBNI.ndi.adv.param.reg
+CopyFiles	= SBNI.ndis5.CopyFiles,SBNI.cxfw.CopyFiles,SBNI.stat.CopyFiles
+
+[SBNIPCI.NDI.Services]
+AddService 	= SG-16PCI, 2, SBNI.Service, common.EventLog
+
+[SBNIPCI.ndi.reg]
+HKR, Ndi, DeviceID, , "PCI\VEN_0055&DEV_009D"
+
+[SBNI.ndi.reg]
+; NDIS Info
+HKR, Ndi,       Service,    0, "SG-16PCI"
+HKR, NDIS,	MajorNdisVersion,1,03
+HKR, NDIS,	MinorNdisVersion,1,0A
+HKR,,MediaType,0,1
+; Interfaces
+HKR, Ndi\Interfaces,UpperRange,,"ndis5"
+HKR, Ndi\Interfaces,LowerRange,,"ethernet"
+
+[SBNI.ndi.param.reg]
+
+; SG-16PCI private params
+
+HKR,NDI\params\NetworkAddress,ParamDesc,,"Network address"
+HKR,NDI\params\NetworkAddress,Type,,"edit"
+HKR,NDI\params\NetworkAddress,Default,,"000000000000"
+HKR,NDI\params\NetworkAddress,LimitText,,"12"
+HKR,NDI\params\NetworkAddress,UpperCase,,"1"
+HKR,NDI\params\NetworkAddress,Optional,, "1"
+
+HKR,NDI\params\LineRate,ParamDesc,,"Line rate, kbit/s"
+HKR,NDI\params\LineRate,Type,,"int"
+HKR,NDI\params\LineRate,Base,,"10"
+HKR,NDI\params\LineRate,Min,,"64"
+HKR,NDI\params\LineRate,Max,,"6016"
+HKR,NDI\params\LineRate,Step,,"64"
+HKR,NDI\params\LineRate,Default,,"4608"
+
+HKR,NDI\params\TerminalType,ParamDesc,,"Terminal type"
+HKR,NDI\params\TerminalType,Type,,"enum"
+HKR,NDI\params\TerminalType,Default,,"0"
+HKR,NDI\params\TerminalType\enum,0,,"Slave"
+HKR,NDI\params\TerminalType\enum,1,,"Master"
+
+HKR,NDI\params\ConfigType,ParamDesc,,"Rate Config Type"
+HKR,NDI\params\ConfigType,Type,,"enum"
+HKR,NDI\params\ConfigType,Default,,"0"
+HKR,NDI\params\ConfigType\enum,0,,"Local"
+HKR,NDI\params\ConfigType\enum,1,,"Preact"
+
+HKR,NDI\params\AnnexType,ParamDesc,,"Annex"
+HKR,NDI\params\AnnexType,Type,,"enum"
+HKR,NDI\params\AnnexType,Default,,"0"
+HKR,NDI\params\AnnexType\enum,0,,"Annex A"
+HKR,NDI\params\AnnexType\enum,1,,"Annex B"
+HKR,NDI\params\AnnexType\enum,3,,"Annex F"
+
+HKR,NDI\params\LineCode,ParamDesc,,"Line code"
+HKR,NDI\params\LineCode,Type,,"enum"
+HKR,NDI\params\LineCode,Default,,"0"
+HKR,NDI\params\LineCode\enum,0,,"Auto"
+HKR,NDI\params\LineCode\enum,1,,"TCPAM32"
+HKR,NDI\params\LineCode\enum,2,,"TCPAM16"
+HKR,NDI\params\LineCode\enum,3,,"TCPAM8"
+HKR,NDI\params\LineCode\enum,4,,"TCPAM4"
+
+HKR,NDI\params\CRC,ParamDesc,,"CRC type"
+HKR,NDI\params\CRC,Type,,"enum"
+HKR,NDI\params\CRC,Default,,"0"
+HKR,NDI\params\CRC\enum,0,,"CRC32"
+HKR,NDI\params\CRC\enum,1,,"CRC16"
+
+HKR,NDI\params\FillByte,ParamDesc,,"Fill byte value"
+HKR,NDI\params\FillByte,Type,,"enum"
+HKR,NDI\params\FillByte,Default,,"0"
+HKR,NDI\params\FillByte\enum,0,,"FF"
+HKR,NDI\params\FillByte\enum,1,,"7E"
+
+HKR,NDI\params\Polarity,ParamDesc,,"Data polarity"
+HKR,NDI\params\Polarity,Type,,"enum"
+HKR,NDI\params\Polarity,Default,,"0"
+HKR,NDI\params\Polarity\enum,0,,"Positive"
+HKR,NDI\params\Polarity\enum,1,,"Negative"
+
+HKR,NDI\params\ReadBurst,ParamDesc,,"PCI read burst"
+HKR,NDI\params\ReadBurst,Type,,"enum"
+HKR,NDI\params\ReadBurst,Default,,"1"
+HKR,NDI\params\ReadBurst\enum,0,,"Disable"
+HKR,NDI\params\ReadBurst\enum,1,,"Enable"
+
+HKR,NDI\params\WriteBurst,ParamDesc,,"PCI write burst"
+HKR,NDI\params\WriteBurst,Type,,"enum"
+HKR,NDI\params\WriteBurst,Default,,"1"
+HKR,NDI\params\WriteBurst\enum,0,,"Disable"
+HKR,NDI\params\WriteBurst\enum,1,,"Enable"
+
+[SBNI.ndi.adv.param.reg]
+
+HKR,NDI\params\AlwaysConnected,ParamDesc,,"Always connected"
+HKR,NDI\params\AlwaysConnected,Type,,"enum"
+HKR,NDI\params\AlwaysConnected,Default,,"0"
+HKR,NDI\params\AlwaysConnected\enum,0,,"Off"
+HKR,NDI\params\AlwaysConnected\enum,1,,"On"
+
+HKR,NDI\params\XmtQueueLen,ParamDesc,,"Transmission queue length"
+HKR,NDI\params\XmtQueueLen,Type,,"int"
+HKR,NDI\params\XmtQueueLen,Base,,"10"
+HKR,NDI\params\XmtQueueLen,Min,,"8"
+HKR,NDI\params\XmtQueueLen,Max,,"128"
+HKR,NDI\params\XmtQueueLen,Step,,"8"
+HKR,NDI\params\XmtQueueLen,Default,,"8"
+
+HKR,NDI\params\RcvQueueLen,ParamDesc,,"Reception queue length"
+HKR,NDI\params\RcvQueueLen,Type,,"int"
+HKR,NDI\params\RcvQueueLen,Base,,"10"
+HKR,NDI\params\RcvQueueLen,Min,,"8"
+HKR,NDI\params\RcvQueueLen,Max,,"128"
+HKR,NDI\params\RcvQueueLen,Step,,"8"
+HKR,NDI\params\RcvQueueLen,Default,,"8"
+
+[SBNI.Service]
+DisplayName     =   %SBNI.Service.DispName%
+ServiceType     =   1 ;%SERVICE_KERNEL_DRIVER%
+StartType       =   3 ;%SERVICE_DEMAND_START%
+ErrorControl    =   1 ;%SERVICE_ERROR_NORMAL%
+ServiceBinary   =   %12%\sg16pci.sys
+LoadOrderGroup  =   NDIS
+
+[common.EventLog]
+AddReg = common.AddEventLog.reg
+
+[common.AddEventLog.reg]
+HKR, , EventMessageFile, 0x00020000, "%%SystemRoot%%\System32\netevent.dll"
+HKR, , TypesSupported,   0x00010001, 7
+
+[SBNI.ndis5.CopyFiles]
+sg16pci.sys,,,2
+
+[SBNI.sg16bin.CopyFiles]
+sg16.bin,,,2
+
+; --- [SBNI.stat.CopyFiles]
+; --- sg16stat.exe,,,2
+
+;****************************************************************************
+; Destination Directories
+;****************************************************************************
+
+[DestinationDirs]
+SBNI.ndis5.CopyFiles = 12
+
+[DestinationDirs]
+SBNI.sg16bin.CopyFiles  = 12
+
+;          [DestinationDirs]
+;           SBNI.stat.CopyFiles  = 11
+
+;****************************************************************************
+; Localizable Strings
+;****************************************************************************
+
+[strings]
+; Provider
+V_PROVIDER = "Sigrand LLC."
+
+; Manufacturers
+V_Sigrand   = "Sigrand LLC."
+
+; Sigrand Devices
+SBNIPCI.Desc="Sigrand SG-16PCI SHDSL Modem"
+
+SBNI.Service.DispName = "Sigrand SG-16PCI SHDSL Modem Driver"
