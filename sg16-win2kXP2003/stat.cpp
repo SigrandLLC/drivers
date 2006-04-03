@@ -537,7 +537,7 @@ static void PrintStat (PCSTR const Guid) {
 
     }
       
-    if (strncmp (Vendor, "Granch", 6)) {
+    if (strncmp (Vendor, "Sigrand", 6)) {
 
       break;
 

@@ -1,4 +1,4 @@
-#define DeviceName "Granch SBNI16 SHDSL PCI Modem"
+#define DeviceName "Sigrand SG16-PCI SHDSL Modem"
 
 #define OID_PRIVATE_READ_STAT 0xFF020210
 #define OID_PRIVATE_CLEAR_STAT 0xFF020211

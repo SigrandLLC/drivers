@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Developer Studio generated include file.
-// Used by sbni16.rc
+// Used by sg16pci.rc
 //
 #define VER_DEBUG                       0
 

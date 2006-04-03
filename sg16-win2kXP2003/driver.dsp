@@ -128,7 +128,7 @@ SOURCE=.\utils.cpp
 # PROP Default_Filter ""
 # Begin Source File
 
-SOURCE=.\sbni16.rc
+SOURCE=.\sg16pci.rc
 # End Source File
 # End Group
 # Begin Group "Header Files"
