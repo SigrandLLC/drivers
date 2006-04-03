@@ -175,8 +175,8 @@ sg16pci.sys,,,2
 [SBNI.sg16bin.CopyFiles]
 sg16.bin,,,2
 
-; --- [SBNI.stat.CopyFiles]
-; --- sg16stat.exe,,,2
+[SBNI.stat.CopyFiles]
+sg16stat.exe,,,2
 
 ;****************************************************************************
 ; Destination Directories
@@ -188,8 +188,8 @@ SBNI.ndis5.CopyFiles = 12
 [DestinationDirs]
 SBNI.sg16bin.CopyFiles  = 12
 
-;          [DestinationDirs]
-;           SBNI.stat.CopyFiles  = 11
+[DestinationDirs]
+SBNI.stat.CopyFiles  = 11
 
 ;****************************************************************************
 ; Localizable Strings
