@@ -495,7 +495,7 @@ NDIS_STATUS AdapterDesc::InitDmaAndInt (void) {
       &MemoryWindowAddr,
       DriverHandle,
       PhysAddr,
-      SBNI16_MEMSIZE
+      SG16_MEMSIZE
     );
 
     if (Status != NDIS_STATUS_SUCCESS) {
@@ -709,7 +709,7 @@ void AdapterDesc::TermDmaAndInt (void) {
 
     Debug (7, this, "Unmapping I/O space");
 
-    NdisMUnmapIoSpace (DriverHandle, MemoryWindowAddr, SBNI16_MEMSIZE);
+    NdisMUnmapIoSpace (DriverHandle, MemoryWindowAddr, SG16_MEMSIZE);
 
     MemoryWindowAddr = NULL;
 

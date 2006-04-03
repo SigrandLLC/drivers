@@ -709,7 +709,7 @@ inline NDIS_STATUS AdapterDesc::MiniportQueryInformation (
 
     //
     // * we must support these OIDs though ones aren't actual for
-    // * SBNI16
+    // * SG16-PCI
     //
 
     case OID_GEN_RCV_NO_BUFFER:
@@ -827,7 +827,7 @@ NDIS_STATUS MiniportQueryInformationOuter (
   PULONG BytesNeeded
 ) {
 
-  return PSBNI16_ADAPTER (Context)->MiniportQueryInformation (
+  return PSG16_ADAPTER (Context)->MiniportQueryInformation (
     Oid,
     InformationBuffer,
     InformationBufferLength,
@@ -964,7 +964,7 @@ NDIS_STATUS MiniportSetInformationOuter (
   PULONG BytesNeeded
 ) {
 
-  return PSBNI16_ADAPTER (Context)->MiniportSetInformation (
+  return PSG16_ADAPTER (Context)->MiniportSetInformation (
     Oid,
     InformationBuffer,
     InformationBufferLength,

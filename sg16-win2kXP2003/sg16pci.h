@@ -5,7 +5,7 @@
 #define PCI_INTERRUPT_REGISTER    0x3C
 
 
-#define SBNI16_MEMSIZE            4096 // Size of memory window
+#define SG16_MEMSIZE            4096 // Size of memory window
 
 
 
@@ -267,7 +267,7 @@ class AdapterDesc {             // Main adapter structure
 
 
 
-typedef AdapterDesc SBNI16_ADAPTER, *PSBNI16_ADAPTER;
+typedef AdapterDesc SG16_ADAPTER, *PSG16_ADAPTER;
 
 
 

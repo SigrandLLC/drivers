@@ -7,7 +7,7 @@
 
 struct StatDesc {               // Statistics
 
-  /* SBNI16 controller statistics */
+  /* SG16 controller statistics */
 
   ULONG64  sent_pkts;
   ULONG64  rcvd_pkts;

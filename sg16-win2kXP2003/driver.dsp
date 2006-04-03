@@ -116,7 +116,7 @@ SOURCE=.\initterm.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\sbni16.cpp
+SOURCE=.\sg16pci.cpp
 # End Source File
 # Begin Source File
 
@@ -172,7 +172,7 @@ SOURCE=.\prefix.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\sbni16.h
+SOURCE=.\sg16pci.h
 # End Source File
 # Begin Source File
 

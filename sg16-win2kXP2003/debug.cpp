@@ -37,7 +37,7 @@ void _UniCall DebugVPrintf (
     if (Adapter && Adapter->MemoryWindowAddr) {
 
       DbgPrint (
-        "sbni%c%05u %X:%s%s\n",
+        "sg16%c%05u %X:%s%s\n",
         Type [0],
         MS,
         Adapter->MemoryWindowAddr,
@@ -47,7 +47,7 @@ void _UniCall DebugVPrintf (
 
   	} else {
 
-      DbgPrint ("sbni %05u:%s%s\n", MS, Type, Str);
+      DbgPrint ("sg16 %05u:%s%s\n", MS, Type, Str);
 
     }
 

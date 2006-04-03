@@ -39,4 +39,4 @@ extern "C" {
 
 #include "utils.h"
 
-#include "sbni16.h"
+#include "sg16pci.h"

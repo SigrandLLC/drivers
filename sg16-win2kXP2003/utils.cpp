@@ -53,7 +53,7 @@ void * _cdecl operator new (size_t Size) {
 
   void *Block;
 
-  static char Tag [] = "sbni";
+  static char Tag [] = "sg16";
 
   NDIS_STATUS const Status = NdisAllocateMemoryWithTag (
     &Block,

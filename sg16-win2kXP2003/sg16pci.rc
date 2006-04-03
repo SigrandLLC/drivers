@@ -50,7 +50,7 @@ BEGIN
             VALUE "CompanyName", "Sigrand LLC\0"
             VALUE "FileDescription", "NDIS 5.0 miniport driver\0"
             VALUE "FileVersion", "1.26\0"
-            VALUE "InternalName", "SBNI16.SYS\0"
+            VALUE "InternalName", "SG16.SYS\0"
             VALUE "LegalCopyright", "(C) Sigrand, LLC, 2002-2004.\0"
             VALUE "LegalTrademarks", "\0"
             VALUE "OriginalFilename", "SG16.SYS\0"

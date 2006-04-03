@@ -1,7 +1,7 @@
 //$T cx28975.c GC 1.138 05/26/04 13:04:20
 
 //
-// cx28975.C Chipset-specific routines for SBNI16 Version 1.1h Last
+// cx28975.C Chipset-specific routines for SG16-PCI Version 1.1h Last
 // Updated 21/04/2004 Known bugs NONE
 //
 // Formatted by GC & Eugene Muzychenko

@@ -230,7 +230,7 @@ void _cdecl DebugPrint (PCSTR Fmt, ...) {
 
   char Str [256];
 
-  strcpy (Str, "sbnistat: ");
+  strcpy (Str, "sg16stat: ");
 
   va_list Args;
 
@@ -697,7 +697,7 @@ int _cdecl main (int ArgC, char *ArgV []) {
 
       StdOut (
         "\n"
-        "usage: sbnistat [-r] <Name>\n"
+        "usage: sg16stat [-r] <Name>\n"
         "\n"
         "  <Name> - adapter name template (? and * allowed)\n"
         "  -r - reset modem stat counters\n"

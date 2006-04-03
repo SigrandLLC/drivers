@@ -1,7 +1,7 @@
 //$T 1.c GC 1.138 05/26/04 13:02:29
 
 //
-// SBNI16.C Kernel-mode driver for sbni16 SHDSL modem
+// SG16PCI.C Kernel-mode driver for sg16 SHDSL modem
 // Last Updated 04/06/2004
 //
 // Notes
@@ -41,16 +41,6 @@
 // ###################################################################
 
 
-
-
-
-//EXTERN_C NDIS_STATUS MiniportInitialize (PNDIS_STATUS,PUINT,PNDIS_MEDIUM,UINT,NDIS_HANDLE,NDIS_HANDLE);
-//EXTERN_C NDIS_STATUS ReadConfiguration (PSBNI16_ADAPTER,NDIS_HANDLE);
-//EXTERN_C NDIS_STATUS RegisterAdapter (PSBNI16_ADAPTER);
-
-//#pragma NDIS_PAGEABLE_FUNCTION (MiniportInitialize)
-//#pragma NDIS_PAGEABLE_FUNCTION (ReadConfiguration)
-//#pragma NDIS_PAGEABLE_FUNCTION (RegisterAdapter)
 
 EXTERN_C NTSTATUS DriverEntry (PDRIVER_OBJECT,PUNICODE_STRING);
 
@@ -776,7 +766,7 @@ VOID MiniportIsrOuter (
   NDIS_HANDLE Context
 ) {
 
-  PSBNI16_ADAPTER (Context)->MiniportIsr (InterruptRecognized, QueueDPC);
+  PSG16_ADAPTER (Context)->MiniportIsr (InterruptRecognized, QueueDPC);
 
 }
 
@@ -905,7 +895,7 @@ inline VOID AdapterDesc::MiniportHandleInterrupt (void) {
 
 VOID MiniportHandleInterruptOuter (NDIS_HANDLE Context) {
 
-  PSBNI16_ADAPTER (Context)->MiniportHandleInterrupt ();
+  PSG16_ADAPTER (Context)->MiniportHandleInterrupt ();
 
 }
 
@@ -962,7 +952,7 @@ VOID MiniportSendPacketsOuter (
   UINT count
 ) {
 
-  PSBNI16_ADAPTER (Context)->MiniportSendPackets (p, count);
+  PSG16_ADAPTER (Context)->MiniportSendPackets (p, count);
 
 }
 
@@ -1000,7 +990,7 @@ VOID MiniportReturnPacketOuter (
   PNDIS_PACKET pkt
 ) {
 
-  PSBNI16_ADAPTER (Context)->MiniportReturnPacket (pkt);
+  PSG16_ADAPTER (Context)->MiniportReturnPacket (pkt);
 
 }
 
@@ -1078,7 +1068,7 @@ NDIS_STATUS MiniportResetOuter (
   NDIS_HANDLE Context
 ) {
 
-  return PSBNI16_ADAPTER (Context)->MiniportReset (need_set_info);
+  return PSG16_ADAPTER (Context)->MiniportReset (need_set_info);
 
 }
 
@@ -1109,7 +1099,7 @@ inline VOID AdapterDesc::MiniportShutdown (void) {
 
 VOID MiniportShutdownOuter (NDIS_HANDLE Context) {
 
-  PSBNI16_ADAPTER (Context)->MiniportShutdown ();
+  PSG16_ADAPTER (Context)->MiniportShutdown ();
 
 }
 
@@ -1157,7 +1147,7 @@ inline BOOLEAN AdapterDesc::MiniportCheckForHang (void) {
 
 BOOLEAN MiniportCheckForHangOuter (NDIS_HANDLE Context) {
 
-  return PSBNI16_ADAPTER (Context)->MiniportCheckForHang ();
+  return PSG16_ADAPTER (Context)->MiniportCheckForHang ();
 
 }
 
@@ -1199,7 +1189,7 @@ EXTERN_C NDIS_STATUS MiniportInitialize (
 
     *SelectedMediumIndex = i;
 
-    PSBNI16_ADAPTER const Adapter = new AdapterDesc;
+    PSG16_ADAPTER const Adapter = new AdapterDesc;
 
     if (!Adapter) {
 
@@ -1283,7 +1273,7 @@ inline VOID AdapterDesc::MiniportHalt (void) {
 
 VOID MiniportHaltOuter (NDIS_HANDLE Context) {
 
-  PSBNI16_ADAPTER (Context)->MiniportHalt ();
+  PSG16_ADAPTER (Context)->MiniportHalt ();
 
 }
 
@@ -1340,31 +1330,31 @@ EXTERN_C NTSTATUS DriverEntry (
 
   NdisMInitializeWrapper (&WrapperHandle, drvObj, registryPath, NULL);
 
-  NDIS_MINIPORT_CHARACTERISTICS sbni16;
+  NDIS_MINIPORT_CHARACTERISTICS sg16;
 
-  NdisZeroMemory (&sbni16, sizeof (sbni16));
+  NdisZeroMemory (&sg16, sizeof (sg16));
 
-  sbni16.Ndis40Chars.Ndis30Chars.MajorNdisVersion = NDIS_MAJOR_VERSION;
-  sbni16.Ndis40Chars.Ndis30Chars.MinorNdisVersion = NDIS_MINOR_VERSION;
+  sg16.Ndis40Chars.Ndis30Chars.MajorNdisVersion = NDIS_MAJOR_VERSION;
+  sg16.Ndis40Chars.Ndis30Chars.MinorNdisVersion = NDIS_MINOR_VERSION;
 
-  sbni16.Ndis40Chars.Ndis30Chars.CheckForHangHandler = MiniportCheckForHangOuter;
-  sbni16.Ndis40Chars.Ndis30Chars.HaltHandler = MiniportHaltOuter;
-  sbni16.Ndis40Chars.Ndis30Chars.HandleInterruptHandler = MiniportHandleInterruptOuter;
-  sbni16.Ndis40Chars.Ndis30Chars.InitializeHandler = MiniportInitialize;
-  sbni16.Ndis40Chars.Ndis30Chars.ISRHandler = MiniportIsrOuter;
-  sbni16.Ndis40Chars.Ndis30Chars.QueryInformationHandler = MiniportQueryInformationOuter;
-  sbni16.Ndis40Chars.Ndis30Chars.ResetHandler = MiniportResetOuter;
-  sbni16.Ndis40Chars.Ndis30Chars.SetInformationHandler = MiniportSetInformationOuter;
+  sg16.Ndis40Chars.Ndis30Chars.CheckForHangHandler = MiniportCheckForHangOuter;
+  sg16.Ndis40Chars.Ndis30Chars.HaltHandler = MiniportHaltOuter;
+  sg16.Ndis40Chars.Ndis30Chars.HandleInterruptHandler = MiniportHandleInterruptOuter;
+  sg16.Ndis40Chars.Ndis30Chars.InitializeHandler = MiniportInitialize;
+  sg16.Ndis40Chars.Ndis30Chars.ISRHandler = MiniportIsrOuter;
+  sg16.Ndis40Chars.Ndis30Chars.QueryInformationHandler = MiniportQueryInformationOuter;
+  sg16.Ndis40Chars.Ndis30Chars.ResetHandler = MiniportResetOuter;
+  sg16.Ndis40Chars.Ndis30Chars.SetInformationHandler = MiniportSetInformationOuter;
 
-  sbni16.Ndis40Chars.SendPacketsHandler = MiniportSendPacketsOuter;
-  sbni16.Ndis40Chars.ReturnPacketHandler = MiniportReturnPacketOuter;
+  sg16.Ndis40Chars.SendPacketsHandler = MiniportSendPacketsOuter;
+  sg16.Ndis40Chars.ReturnPacketHandler = MiniportReturnPacketOuter;
 
   Debug (7, NULL, "Registering miniport for driver object %X", drvObj);
 
   NDIS_STATUS const Status = NdisMRegisterMiniport (
     WrapperHandle,
-    &sbni16,
-    sizeof (sbni16)
+    &sg16,
+    sizeof (sg16)
   );
 
   if (Status == NDIS_STATUS_SUCCESS) {
