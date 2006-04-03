@@ -1,0 +1,17 @@
+TARGETNAME = sbnistat
+TARGETPATH = obj
+TARGETTYPE = PROGRAM
+
+INCLUDES = ..\..
+
+TARGETLIBS = \
+  $(SDK_LIB_PATH)\comctl32.lib \
+  $(SDK_LIB_PATH)\kernel32.lib \
+  $(SDK_LIB_PATH)\user32.lib \
+  $(SDK_LIB_PATH)\uuid.lib \
+  $(SDK_LIB_PATH)\shell32.lib \
+	
+UMTYPE = console
+
+SOURCES = \
+  stat.cpp \

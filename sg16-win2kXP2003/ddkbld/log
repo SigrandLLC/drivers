@@ -1,0 +1,23 @@
+BUILD: Compile and Link for i386
+BUILD: Computing Include file dependencies:
+BUILD: f:\program files\microsoft visual studio\vc98\include\exdisp.odl(31): f:\program files\microsoft visual studio\vc98\include\exdisp.odl - invalid include statement: importlib(STDOLE_TLB);
+BUILD: f:\program files\microsoft visual studio\vc98\include\vidsvr.odl(16): f:\program files\microsoft visual studio\vc98\include\vidsvr.odl - invalid include statement: importlib(STDOLE_TLB);
+BUILD: Examining e:\develop\win2kdrv\ddkbld directory tree for files to compile.
+    e:\develop\win2kdrv\ddkbld 
+    e:\develop\win2kdrv\ddkbld\driver 
+    e:\develop\win2kdrv\ddkbld\driver - 6 source files (6 lines)
+    e:\develop\win2kdrv\ddkbld\stat 
+    e:\develop\win2kdrv\ddkbld\stat - 1 source files (1 lines)
+BUILD: Unable to save the dependency database: \nt\build.dat
+Total of 7 source files (7 lines) to compile in 2 directories
+
+BUILD: Compiling e:\develop\win2kdrv\ddkbld\driver directory
+BUILD: NMAKE.EXE failed - rc = 2
+BUILD: Compiling e:\develop\win2kdrv\ddkbld\stat directory
+BUILD: NMAKE.EXE failed - rc = 2
+BUILD: Linking e:\develop\win2kdrv\ddkbld\driver directory
+BUILD: NMAKE.EXE failed - rc = 2
+BUILD: Linking e:\develop\win2kdrv\ddkbld\stat directory
+BUILD: NMAKE.EXE failed - rc = 2
+BUILD: Done
+

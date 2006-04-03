@@ -1,0 +1,18 @@
+TARGETNAME = sbni16
+TARGETPATH = obj
+TARGETTYPE = DRIVER
+
+INCLUDES = ..\..
+
+TARGETLIBS = \
+  $(DDK_LIB_PATH)\hal.lib \
+  $(DDK_LIB_PATH)\ntoskrnl.lib \
+  $(DDK_LIB_PATH)\ndis.lib \
+	
+SOURCES = \
+  config.cpp \
+  cx28975.cpp \
+  debug.cpp \
+  initterm.cpp \
+  sbni16.cpp \
+  utils.cpp \
