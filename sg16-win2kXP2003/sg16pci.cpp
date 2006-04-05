@@ -1161,21 +1161,24 @@ MiniportInitialize (PNDIS_STATUS OpenErrorStatus, PUINT SelectedMediumIndex,
 					NDIS_HANDLE WrapperConfigurationContext)
 {
 
-  UNUSED (OpenErrorStatus);
+#ifdef _DEBUG
+	DbgBreakPoint();
+#endif
 
-  Debug (0, NULL, "MiniportInitialize for %X: ENTER", MPH);
 
-  NDIS_STATUS Status;
+	UNUSED (OpenErrorStatus);
 
-  do {
+	Debug (0, NULL, "MiniportInitialize for %X: ENTER", MPH);
 
-    for (UINT i = 0; i < MediumArraySize && MediumArray [i] != NdisMedium802_3; ++i);
+	NDIS_STATUS Status;
 
-    if (i == MediumArraySize) {
+	do {
 
-      Status = NDIS_STATUS_UNSUPPORTED_MEDIA;
-      break;
+		for (UINT i = 0; i < MediumArraySize && MediumArray [i] != NdisMedium802_3; ++i);
+		    if (i == MediumArraySize) {
 
+		Status = NDIS_STATUS_UNSUPPORTED_MEDIA;
+		break;
     }
 
     *SelectedMediumIndex = i;
@@ -1275,7 +1278,10 @@ EXTERN_C NTSTATUS DriverEntry (
 
 #ifdef _DEBUG
 	DbgPrint ("\n\n\n");
+	DbgBreakPoint();
 #endif
+
+
 
 	ULONG SysTime;
 	NdisGetSystemUpTime (&SysTime);

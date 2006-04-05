@@ -1,4 +1,4 @@
 @echo off
 cd driver\Debug
-call nmsymls sbni16.sys
+call nmsym sg16pci.sys
 cd ..\..
