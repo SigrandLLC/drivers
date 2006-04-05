@@ -1118,15 +1118,11 @@ inline BOOLEAN AdapterDesc::MiniportCheckForHang (void) {
 
   Check ();
 
-  Debug (
-    5,
-    this,
-    "Checking for hang: CRA=%X, CRB=%X, SR=%X, IMR=%X, TR=%u",
-    HLDC->CRA, HLDC->CRB, HLDC->SR, HLDC->IMR, TotalReceivedBytes
-  );
+  Debug ( 5,this,"Checking for hang: CRA=%X, CRB=%X, SR=%X, IMR=%X, TR=%u",
+				HLDC->CRA, HLDC->CRB, HLDC->SR,
+				HLDC->IMR, TotalReceivedBytes);
 
-  return FALSE /* (ModemState != ACTIVE) */;
-
+  return FALSE;
   /*
   Lock ();
 
@@ -1142,13 +1138,12 @@ inline BOOLEAN AdapterDesc::MiniportCheckForHang (void) {
 
   return FALSE;
   */
-
 }
 
-BOOLEAN MiniportCheckForHangOuter (NDIS_HANDLE Context) {
-
+BOOLEAN
+MiniportCheckForHangOuter (NDIS_HANDLE Context)
+{
   return PSG16_ADAPTER (Context)->MiniportCheckForHang ();
-
 }
 
 
@@ -1160,19 +1155,15 @@ BOOLEAN MiniportCheckForHangOuter (NDIS_HANDLE Context) {
 // =======================
 //
 
-EXTERN_C NDIS_STATUS MiniportInitialize (
-  PNDIS_STATUS OpenErrorStatus,
-  PUINT SelectedMediumIndex,
-  PNDIS_MEDIUM MediumArray,
-  UINT MediumArraySize,
-  NDIS_HANDLE MPH,
-  NDIS_HANDLE WrapperConfigurationContext
-) {
+EXTERN_C NDIS_STATUS
+MiniportInitialize (PNDIS_STATUS OpenErrorStatus, PUINT SelectedMediumIndex,
+					PNDIS_MEDIUM MediumArray,UINT MediumArraySize, NDIS_HANDLE MPH,
+					NDIS_HANDLE WrapperConfigurationContext)
+{
 
   UNUSED (OpenErrorStatus);
 
   Debug (0, NULL, "MiniportInitialize for %X: ENTER", MPH);
-  DbgPrint("MiniportInitialize for %X: ENTER\n", MPH);
 
   NDIS_STATUS Status;
 
@@ -1183,7 +1174,6 @@ EXTERN_C NDIS_STATUS MiniportInitialize (
     if (i == MediumArraySize) {
 
       Status = NDIS_STATUS_UNSUPPORTED_MEDIA;
-DbgPrint("MiniportInitialize, unsupported media\n");
       break;
 
     }
@@ -1195,15 +1185,11 @@ DbgPrint("MiniportInitialize, unsupported media\n");
     if (!Adapter) {
 
       Status = NDIS_STATUS_RESOURCES;
-DbgPrint("MiniportInitialize, bad with resources\n");
       break;
 
     }
 
     Status = Adapter->Init (MPH, WrapperConfigurationContext);
-	DbgPrint("MiniportInitialize init return status=%X\n",Status);
-
-
     if (Status != NDIS_STATUS_SUCCESS) {
 
       delete Adapter;
@@ -1213,8 +1199,6 @@ DbgPrint("MiniportInitialize, bad with resources\n");
   } while (False);
 
   Debug (0, NULL, "MiniportInitialize for %X: EXIT", MPH);
-DbgPrint("MiniportInitialize for %X: EXIT,status=%X\n", MPH,Status);
-
   return Status;
 
 }
@@ -1230,49 +1214,20 @@ DbgPrint("MiniportInitialize for %X: EXIT,status=%X\n", MPH,Status);
 
 inline VOID AdapterDesc::MiniportHalt (void) {
 
-  Debug (0, this, "MiniportHalt: ENTER");
-
-  Check ();
-
-  Debug (7, this, "Halting the adapter");
-
-  Lock ();
-
-  ResetTransceiver ();
-
-  DisableInterrupts ();
-
-  Unlock ();
-
-  /*
-  BYTE t = 0;
-
-  Verify (DoModemCmd (_DSL_ACTIVATION, &t, 1));
-
-  if (ModemState == ACTIVE) {
-
-    t = 1;
-
-    Verify (DoModemCmd (_DSL_FORCE_DEACTIVATE, &t, 1));
-
-    // FIX! activation manager state
-
-  }
-  */
-
-  HLDC->CRA = 0;
-  HLDC->ResetStatusBits (ALL);
-
-  ModemState = DOWN;
-
-  ShutdownModem ();
-
-  Term ();
-
-  delete this;
-
-  Debug (0, NULL, "MiniportHalt: EXIT");
-
+	Debug (0, this, "MiniportHalt: ENTER");
+	Check ();
+	Debug (7, this, "Halting the adapter");
+	Lock ();
+	ResetTransceiver ();
+	DisableInterrupts ();
+	Unlock ();
+	HLDC->CRA = 0;
+	HLDC->ResetStatusBits (ALL);
+	ModemState = DOWN;
+	ShutdownModem ();
+	Term ();
+	delete this;
+	Debug (0, NULL, "MiniportHalt: EXIT");
 }
 
 VOID MiniportHaltOuter (NDIS_HANDLE Context) {
@@ -1319,65 +1274,38 @@ EXTERN_C NTSTATUS DriverEntry (
 ) {
 
 #ifdef _DEBUG
-
-  DbgPrint ("\n\n\n");
-
+	DbgPrint ("\n\n\n");
 #endif
 
-  ULONG SysTime;
+	ULONG SysTime;
+	NdisGetSystemUpTime (&SysTime);
+	srand (SysTime);
+	NDIS_HANDLE WrapperHandle;
+	NdisMInitializeWrapper (&WrapperHandle, drvObj, registryPath, NULL);
+	NDIS_MINIPORT_CHARACTERISTICS sg16;
+	NdisZeroMemory (&sg16, sizeof (sg16));
+	sg16.Ndis40Chars.Ndis30Chars.MajorNdisVersion = NDIS_MAJOR_VERSION;
+	sg16.Ndis40Chars.Ndis30Chars.MinorNdisVersion = NDIS_MINOR_VERSION;
+	sg16.Ndis40Chars.Ndis30Chars.CheckForHangHandler = MiniportCheckForHangOuter;
+	sg16.Ndis40Chars.Ndis30Chars.HaltHandler = MiniportHaltOuter;
+	sg16.Ndis40Chars.Ndis30Chars.HandleInterruptHandler = MiniportHandleInterruptOuter;
+	sg16.Ndis40Chars.Ndis30Chars.InitializeHandler = MiniportInitialize;
+	sg16.Ndis40Chars.Ndis30Chars.ISRHandler = MiniportIsrOuter;
+	sg16.Ndis40Chars.Ndis30Chars.QueryInformationHandler = MiniportQueryInformationOuter;
+	sg16.Ndis40Chars.Ndis30Chars.ResetHandler = MiniportResetOuter;
+	sg16.Ndis40Chars.Ndis30Chars.SetInformationHandler = MiniportSetInformationOuter;
+	sg16.Ndis40Chars.SendPacketsHandler = MiniportSendPacketsOuter;
+	sg16.Ndis40Chars.ReturnPacketHandler = MiniportReturnPacketOuter;
 
-  NdisGetSystemUpTime (&SysTime);
+	Debug (7, NULL, "Registering miniport for driver object %X", drvObj);
 
-  srand (SysTime);
-
-  NDIS_HANDLE WrapperHandle;
-
-  NdisMInitializeWrapper (&WrapperHandle, drvObj, registryPath, NULL);
-  
-DbgPrint("Init Wrapper\n");
-
-  NDIS_MINIPORT_CHARACTERISTICS sg16;
-
-  NdisZeroMemory (&sg16, sizeof (sg16));
-
-  sg16.Ndis40Chars.Ndis30Chars.MajorNdisVersion = NDIS_MAJOR_VERSION;
-  sg16.Ndis40Chars.Ndis30Chars.MinorNdisVersion = NDIS_MINOR_VERSION;
-
-  sg16.Ndis40Chars.Ndis30Chars.CheckForHangHandler = MiniportCheckForHangOuter;
-  sg16.Ndis40Chars.Ndis30Chars.HaltHandler = MiniportHaltOuter;
-  sg16.Ndis40Chars.Ndis30Chars.HandleInterruptHandler = MiniportHandleInterruptOuter;
-  sg16.Ndis40Chars.Ndis30Chars.InitializeHandler = MiniportInitialize;
-  sg16.Ndis40Chars.Ndis30Chars.ISRHandler = MiniportIsrOuter;
-  sg16.Ndis40Chars.Ndis30Chars.QueryInformationHandler = MiniportQueryInformationOuter;
-  sg16.Ndis40Chars.Ndis30Chars.ResetHandler = MiniportResetOuter;
-  sg16.Ndis40Chars.Ndis30Chars.SetInformationHandler = MiniportSetInformationOuter;
-
-  sg16.Ndis40Chars.SendPacketsHandler = MiniportSendPacketsOuter;
-  sg16.Ndis40Chars.ReturnPacketHandler = MiniportReturnPacketOuter;
-
-DbgPrint("Registering miniport for driver object\n", drvObj);
-//  Debug (7, NULL, "Registering miniport for driver object %X", drvObj);
-
-  NDIS_STATUS const Status = NdisMRegisterMiniport (
-    WrapperHandle,
-    &sg16,
-    sizeof (sg16)
-  );
-DbgPrint("Registered\n");
-  if (Status == NDIS_STATUS_SUCCESS) {
-
-    IfDebug (NdisMRegisterUnloadHandler (WrapperHandle, DriverUnload));
-DbgPrint("Success\n");
-
-  } else {
-
-    Debug (9, NULL, "Cannot register miniport (%X)", Status);
-
-    NdisTerminateWrapper (WrapperHandle, NULL);
-
-  }
-
-  DbgPrint("Status=%d\n",Status);
-  return Status;
-
+	NDIS_STATUS const Status = NdisMRegisterMiniport( WrapperHandle,&sg16,
+															sizeof (sg16) );
+	if (Status == NDIS_STATUS_SUCCESS) {
+		IfDebug (NdisMRegisterUnloadHandler (WrapperHandle, DriverUnload));
+	}else {
+	    Debug (9, NULL, "Cannot register miniport (%X)", Status);
+	    NdisTerminateWrapper (WrapperHandle, NULL);
+	}
+	return Status;
 }

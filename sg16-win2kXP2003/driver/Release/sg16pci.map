@@ -1,0 +1,154 @@
+ sg16pci
+
+ Timestamp is 4431fb3a (Tue Apr 04 11:51:06 2006)
+
+ Preferred load address is 00400000
+
+ Start         Length     Name                   Class
+ 0001:00000000 00002a18H .text                   CODE
+ 0002:00000000 000000d8H .idata$5                DATA
+ 0002:000000d8 000000c8H .rdata                  DATA
+ 0003:00000000 00000191H .data                   DATA
+ 0004:00000000 000000d0H INIT                    CODE
+ 0004:000000d0 0000003cH .idata$2                CODE
+ 0004:0000010c 00000014H .idata$3                CODE
+ 0004:00000120 000000d8H .idata$4                CODE
+ 0004:000001f8 000004a0H .idata$6                CODE
+ 0005:00000000 00000058H .rsrc$01                DATA
+ 0005:00000060 00000380H .rsrc$02                DATA
+
+  Address         Publics by Value              Rva+Base     Lib:Object
+
+ 0001:00000000       ?ReadConfiguration@AdapterDesc@@QAEHPAX@Z 00401000 f   config.obj
+ 0001:00000650       ?MiniportQueryInformationOuter@@YGHPAXK0KPAK1@Z 00401650 f   config.obj
+ 0001:00000a10       ?MiniportSetInformationOuter@@YGHPAXK0KPAK1@Z 00401a10 f   config.obj
+ 0001:00000b60       ?ReadModemStatComplete@AdapterDesc@@QAEX_N@Z 00401b60 f   config.obj
+ 0001:00000c20       ?ResetModemStatComplete@AdapterDesc@@QAEX_N@Z 00401c20 f   config.obj
+ 0001:00000c50       ?WaitForModemReply@AdapterDesc@@QAE_NXZ 00401c50 f   cx28975.obj
+ 0001:00000c90       ?SendModemMessage@AdapterDesc@@QAEXEPBXI@Z 00401c90 f   cx28975.obj
+ 0001:00000d00       ?DoModemCmd@AdapterDesc@@QAE_NEPBXIP81@AEXK@ZK@Z 00401d00 f   cx28975.obj
+ 0001:00000d50       ?cx28975_interrupt@AdapterDesc@@QAEXXZ 00401d50 f   cx28975.obj
+ 0001:00000e00       ?download_firmware@AdapterDesc@@QAE_NPBEI@Z 00401e00 f   cx28975.obj
+ 0001:00000ec0       ?start_cx28975@AdapterDesc@@QAE_NPBXI@Z 00401ec0 f   cx28975.obj
+ 0001:000012d0       ?ShutdownModem@AdapterDesc@@QAEXXZ 004022d0 f   cx28975.obj
+ 0001:000012f0       ?ReadModemStat@AdapterDesc@@QAEXK@Z 004022f0 f   cx28975.obj
+ 0001:000013d0       ?ResetModemStat@AdapterDesc@@QAEXK@Z 004023d0 f   cx28975.obj
+ 0001:00001440       ??0AdapterDesc@@QAE@XZ     00402440 f   initterm.obj
+ 0001:000015d0       ??1AdapterDesc@@QAE@XZ     004025d0 f   initterm.obj
+ 0001:00001620       ?Reset@AdapterDesc@@QAEXXZ 00402620 f   initterm.obj
+ 0001:00001630       ?CardStart@AdapterDesc@@QAEHXZ 00402630 f   initterm.obj
+ 0001:00001710       ?CreatePools@AdapterDesc@@QAEHXZ 00402710 f   initterm.obj
+ 0001:00001940       ?DestroyPools@AdapterDesc@@QAEXXZ 00402940 f   initterm.obj
+ 0001:00001a10       ?InitDmaAndInt@AdapterDesc@@QAEHXZ 00402a10 f   initterm.obj
+ 0001:00001b50       ?TermDmaAndInt@AdapterDesc@@QAEXXZ 00402b50 f   initterm.obj
+ 0001:00001be0       ?Init@AdapterDesc@@QAEHPAX0@Z 00402be0 f   initterm.obj
+ 0001:00001cb0       ?Term@AdapterDesc@@QAEXXZ  00402cb0 f   initterm.obj
+ 0001:00001d00       ?DisableReceiver@AdapterDesc@@QAEXXZ 00402d00 f   sg16pci.obj
+ 0001:00001d10       ?EnableReceiver@AdapterDesc@@QAEXXZ 00402d10 f   sg16pci.obj
+ 0001:00001d20       ?ResetTransceiver@AdapterDesc@@QAEXXZ 00402d20 f   sg16pci.obj
+ 0001:00001d30       ?StartTransceiver@AdapterDesc@@QAEXXZ 00402d30 f   sg16pci.obj
+ 0001:00001d50       ?Indicate@AdapterDesc@@QBEXH@Z 00402d50 f   sg16pci.obj
+ 0001:00001d80       ?FillXmtQueue@AdapterDesc@@QAEXXZ 00402d80 f   sg16pci.obj
+ 0001:00001ef0       ?CompleteTxPackets@AdapterDesc@@QAEXXZ 00402ef0 f   sg16pci.obj
+ 0001:00001fb0       ?CancelTxPackets@AdapterDesc@@QAEXXZ 00402fb0 f   sg16pci.obj
+ 0001:00002030       ?FillRcvQueue@AdapterDesc@@QAEXXZ 00403030 f   sg16pci.obj
+ 0001:000020e0       ?CompleteRxPackets@AdapterDesc@@QAEXXZ 004030e0 f   sg16pci.obj
+ 0001:00002290       ?CancelRxPackets@AdapterDesc@@QAEXXZ 00403290 f   sg16pci.obj
+ 0001:000022e0       ?MiniportIsrOuter@@YGXPAE0PAX@Z 004032e0 f   sg16pci.obj
+ 0001:00002390       ?MiniportHandleInterruptOuter@@YGXPAX@Z 00403390 f   sg16pci.obj
+ 0001:000024f0       ?MiniportSendPacketsOuter@@YGXPAXPAPAU_NDIS_PACKET@@I@Z 004034f0 f   sg16pci.obj
+ 0001:00002560       ?MiniportReturnPacketOuter@@YGXPAXPAU_NDIS_PACKET@@@Z 00403560 f   sg16pci.obj
+ 0001:000025a0       ?MiniportResetOuter@@YGHPAEPAX@Z 004035a0 f   sg16pci.obj
+ 0001:00002640       ?MiniportShutdownOuter@@YGXPAX@Z 00403640 f   sg16pci.obj
+ 0001:00002660       ?MiniportCheckForHangOuter@@YGEPAX@Z 00403660 f   sg16pci.obj
+ 0001:00002670       _MiniportInitialize@24     00403670 f   sg16pci.obj
+ 0001:00002700       ?MiniportHaltOuter@@YGXPAX@Z 00403700 f   sg16pci.obj
+ 0001:00002770       ??2@YAPAXI@Z               00403770 f   utils.obj
+ 0001:000027a0       ??3@YAXPAX@Z               004037a0 f   utils.obj
+ 0001:000027b0       ??0SpinLock@@QAE@XZ        004037b0 f   utils.obj
+ 0001:000027d0       ??1SpinLock@@QAE@XZ        004037d0 f   utils.obj
+ 0001:000027e0       ?Acquire@SpinLock@@QAEXXZ  004037e0 f   utils.obj
+ 0001:00002820       ?Release@SpinLock@@QAEXXZ  00403820 f   utils.obj
+ 0001:00002840       ?IsOwned@SpinLock@@QBE_NXZ 00403840 f   utils.obj
+ 0001:00002870       ??0DmaPacketDesc@@QAE@PAXKPAU_NDIS_PACKET@@@Z 00403870 f   utils.obj
+ 0001:00002890       ??1DmaPacketDesc@@QAE@XZ   00403890 f   utils.obj
+ 0001:000028a0       ??0DmaQueue@@QAE@XZ        004038a0 f   utils.obj
+ 0001:000028b0       ??1DmaQueue@@QAE@XZ        004038b0 f   utils.obj
+ 0001:000028c0       ?CreateElem@DmaQueue@@QAEPAVDmaPacketDesc@@PAXKPAU_NDIS_PACKET@@@Z 004038c0 f   utils.obj
+ 0001:00002910       ?DestroyAll@DmaQueue@@QAEXXZ 00403910 f   utils.obj
+ 0001:00002940       ?Append@DmaQueue@@QAEXQAVDmaPacketDesc@@@Z 00403940 f   utils.obj
+ 0001:00002970       ?RemoveFirst@DmaQueue@@QAEPAVDmaPacketDesc@@XZ 00403970 f   utils.obj
+ 0001:00002990       ??0PacketList@@QAE@XZ      00403990 f   utils.obj
+ 0001:000029a0       ??1PacketList@@QAE@XZ      004039a0 f   utils.obj
+ 0001:000029b0       ?Append@PacketList@@QAEXQAU_NDIS_PACKET@@@Z 004039b0 f   utils.obj
+ 0001:000029e0       ?RemoveFirst@PacketList@@QAEPAU_NDIS_PACKET@@XZ 004039e0 f   utils.obj
+ 0001:00002a00       _NdisAdjustBufferLength@8  00403a00 f   ndis:NDIS.SYS
+ 0001:00002a06       _rand                      00403a06 f   ntoskrnl:ntoskrnl.exe
+ 0001:00002a0c       _DbgPrint                  00403a0c f   ntoskrnl:ntoskrnl.exe
+ 0001:00002a12       _srand                     00403a12 f   ntoskrnl:ntoskrnl.exe
+ 0002:00000000       __imp__KeStallExecutionProcessor@4 00404000     hal:HAL.dll
+ 0002:00000004       \177HAL_NULL_THUNK_DATA    00404004     hal:HAL.dll
+ 0002:00000008       __imp__NdisReadConfiguration@20 00404008     ndis:NDIS.SYS
+ 0002:0000000c       __imp__NdisResetEvent@4    0040400c     ndis:NDIS.SYS
+ 0002:00000010       __imp__NdisWaitEvent@8     00404010     ndis:NDIS.SYS
+ 0002:00000014       __imp__NdisSetEvent@4      00404014     ndis:NDIS.SYS
+ 0002:00000018       __imp__NdisInitializeEvent@4 00404018     ndis:NDIS.SYS
+ 0002:0000001c       __imp__NdisCloseFile@4     0040401c     ndis:NDIS.SYS
+ 0002:00000020       __imp__NdisUnmapFile@4     00404020     ndis:NDIS.SYS
+ 0002:00000024       __imp__NdisMapFile@12      00404024     ndis:NDIS.SYS
+ 0002:00000028       __imp__NdisOpenFile@24     00404028     ndis:NDIS.SYS
+ 0002:0000002c       __imp__NdisFreePacket@4    0040402c     ndis:NDIS.SYS
+ 0002:00000030       __imp__NdisFreeBuffer@4    00404030     ndis:NDIS.SYS
+ 0002:00000034       __imp__NdisAllocateBuffer@20 00404034     ndis:NDIS.SYS
+ 0002:00000038       __imp__NdisAllocatePacket@12 00404038     ndis:NDIS.SYS
+ 0002:0000003c       __imp__NdisAllocateBufferPool@12 0040403c     ndis:NDIS.SYS
+ 0002:00000040       __imp__NdisAllocatePacketPool@16 00404040     ndis:NDIS.SYS
+ 0002:00000044       __imp__NdisFreePacketPool@4 00404044     ndis:NDIS.SYS
+ 0002:00000048       __imp__NdisFreeBufferPool@4 00404048     ndis:NDIS.SYS
+ 0002:0000004c       __imp__NdisWriteErrorLogEntry 0040404c     ndis:NDIS.SYS
+ 0002:00000050       __imp__NdisMRegisterInterrupt@28 00404050     ndis:NDIS.SYS
+ 0002:00000054       __imp__NdisMAllocateSharedMemory@20 00404054     ndis:NDIS.SYS
+ 0002:00000058       __imp__NdisMAllocateMapRegisters@20 00404058     ndis:NDIS.SYS
+ 0002:0000005c       __imp__NdisMMapIoSpace@20  0040405c     ndis:NDIS.SYS
+ 0002:00000060       __imp__NdisReadPciSlotInformation@20 00404060     ndis:NDIS.SYS
+ 0002:00000064       __imp__NdisMFreeMapRegisters@4 00404064     ndis:NDIS.SYS
+ 0002:00000068       __imp__NdisMFreeSharedMemory@24 00404068     ndis:NDIS.SYS
+ 0002:0000006c       __imp__NdisMDeregisterInterrupt@4 0040406c     ndis:NDIS.SYS
+ 0002:00000070       __imp__NdisCloseConfiguration@4 00404070     ndis:NDIS.SYS
+ 0002:00000074       __imp__NdisOpenConfiguration@12 00404074     ndis:NDIS.SYS
+ 0002:00000078       __imp__NdisMSetAttributesEx@20 00404078     ndis:NDIS.SYS
+ 0002:0000007c       __imp__NdisMRegisterAdapterShutdownHandler@12 0040407c     ndis:NDIS.SYS
+ 0002:00000080       __imp__NdisMDeregisterAdapterShutdownHandler@4 00404080     ndis:NDIS.SYS
+ 0002:00000084       __imp__NdisQueryBuffer@12  00404084     ndis:NDIS.SYS
+ 0002:00000088       __imp__NdisAdjustBufferLength@8 00404088     ndis:NDIS.SYS
+ 0002:0000008c       __imp__NdisGetCurrentSystemTime@4 0040408c     ndis:NDIS.SYS
+ 0002:00000090       __imp__NdisTerminateWrapper@8 00404090     ndis:NDIS.SYS
+ 0002:00000094       __imp__NdisMRegisterMiniport@12 00404094     ndis:NDIS.SYS
+ 0002:00000098       __imp__NdisInitializeWrapper@16 00404098     ndis:NDIS.SYS
+ 0002:0000009c       __imp__NdisGetSystemUpTime@4 0040409c     ndis:NDIS.SYS
+ 0002:000000a0       __imp__NdisAllocateMemoryWithTag@12 004040a0     ndis:NDIS.SYS
+ 0002:000000a4       __imp__NdisFreeMemory@12   004040a4     ndis:NDIS.SYS
+ 0002:000000a8       __imp__NdisAllocateSpinLock@4 004040a8     ndis:NDIS.SYS
+ 0002:000000ac       __imp__NdisFreeSpinLock@4  004040ac     ndis:NDIS.SYS
+ 0002:000000b0       __imp__NdisGetCurrentProcessorCounts@12 004040b0     ndis:NDIS.SYS
+ 0002:000000b4       __imp__NdisAcquireSpinLock@4 004040b4     ndis:NDIS.SYS
+ 0002:000000b8       __imp__NdisReleaseSpinLock@4 004040b8     ndis:NDIS.SYS
+ 0002:000000bc       __imp__NdisMUnmapIoSpace@12 004040bc     ndis:NDIS.SYS
+ 0002:000000c0       __imp__NdisWriteConfiguration@16 004040c0     ndis:NDIS.SYS
+ 0002:000000c4       \177NDIS_NULL_THUNK_DATA   004040c4     ndis:NDIS.SYS
+ 0002:000000c8       __imp__rand                004040c8     ntoskrnl:ntoskrnl.exe
+ 0002:000000cc       __imp__srand               004040cc     ntoskrnl:ntoskrnl.exe
+ 0002:000000d0       __imp__DbgPrint            004040d0     ntoskrnl:ntoskrnl.exe
+ 0002:000000d4       \177ntoskrnl_NULL_THUNK_DATA 004040d4     ntoskrnl:ntoskrnl.exe
+ 0002:000000fc       ?SupportedOids@?4??MiniportQueryInformation@AdapterDesc@@QAEHKPAXKPAK1@Z@4QBIB 004040fc     config.obj
+ 0002:00000198       ?HighestAddr@@3T_LARGE_INTEGER@@B 00404198     utils.obj
+ 0004:00000000       _DriverEntry@8             00406000 f   sg16pci.obj
+ 0004:000000d0       __IMPORT_DESCRIPTOR_NDIS   004060d0     ndis:NDIS.SYS
+ 0004:000000e4       __IMPORT_DESCRIPTOR_ntoskrnl 004060e4     ntoskrnl:ntoskrnl.exe
+ 0004:000000f8       __IMPORT_DESCRIPTOR_HAL    004060f8     hal:HAL.dll
+ 0004:0000010c       __NULL_IMPORT_DESCRIPTOR   0040610c     ndis:NDIS.SYS
+
+ entry point at        0000:00000000
+
+ Static symbols
+

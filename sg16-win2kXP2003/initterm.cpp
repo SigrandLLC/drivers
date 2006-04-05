@@ -160,7 +160,6 @@ NDIS_STATUS AdapterDesc::CardStart (void) {
 
 		if (Status != NDIS_STATUS_SUCCESS) {
 			Debug (9, this, "CardStart:ERROR - NdisOpenFile (%X)", Status);
-DbgPrint("CS: err - ndisOpenFile\n");
 			break;
 		}
 
@@ -170,13 +169,11 @@ DbgPrint("CS: err - ndisOpenFile\n");
 
 		if (Status != NDIS_STATUS_SUCCESS) {
 			Debug (9, this, "CardStart:ERROR - NdisMapFile (%X)", Status);
-DbgPrint("CS: err - ndisMapFile\n");
 			break;
 
 		}
 
     if (!start_cx28975 (firmw_img, firmw_len)) {
-DbgPrint("CS: err - start_cx28975\n");
 		Status = NDIS_STATUS_FAILURE;
 		break;
     }
@@ -481,7 +478,6 @@ NDIS_STATUS AdapterDesc::InitDmaAndInt (void) {
 		
 		if (Status != NDIS_STATUS_SUCCESS) {
 			Debug (9, this, "RegisterAdapter:ERROR - NdisMMapIoSpace (%X)", Status);
-DbgPrint("InitDMAAndIRQ:RegisterAdapter:ERROR - NdisMMapIoSpace (%X)\n", Status);
 			break;
 		}
 
@@ -505,7 +501,6 @@ DbgPrint("InitDMAAndIRQ:RegisterAdapter:ERROR - NdisMMapIoSpace (%X)\n", Status)
 												1,DmaMemSize );
 
 		if (Status != NDIS_STATUS_SUCCESS) {
-DbgPrint( "InitDMAAndIRQ:Cannot allocate map registers (%X)\n", Status);
 			Debug (9, this, "Cannot allocate map registers (%X)", Status);
 			break;
 		}
@@ -516,7 +511,6 @@ DbgPrint( "InitDMAAndIRQ:Cannot allocate map registers (%X)\n", Status);
 									&DmaMemAddr, &DmaMemPhysAddr );
 
 		if (!DmaMemAddr) {
-DbgPrint( "InitDMAAndIRQ: Cannot allocate %u bytes of DMA memory\n", DmaMemSize);
 			Debug (9, this, "Cannot allocate %u bytes of DMA memory", DmaMemSize);
 			Status = NDIS_STATUS_RESOURCES;
 			break;
@@ -528,7 +522,6 @@ DbgPrint( "InitDMAAndIRQ: Cannot allocate %u bytes of DMA memory\n", DmaMemSize)
 		Status = CreatePools ();
 
 		if (Status != NDIS_STATUS_SUCCESS) {
-DbgPrint( "InitDMAAndIRQ: Create Pools err\n");
 			break;
 		}
 
@@ -539,7 +532,6 @@ DbgPrint( "InitDMAAndIRQ: Create Pools err\n");
 
 		if (Status != NDIS_STATUS_SUCCESS) {
 			Debug (9, this, "Cannot register interrupt (%X)", Status);
-DbgPrint( "InitDMAAndIRQ: Create Pools err\n");
 			NdisWriteErrorLogEntry (DriverHandle,NDIS_ERROR_CODE_INTERRUPT_CONNECT,0);
 			break;
 		}
@@ -550,7 +542,6 @@ DbgPrint( "InitDMAAndIRQ: Create Pools err\n");
 
 		Status = CardStart ();
 		if (Status != NDIS_STATUS_SUCCESS) {
-DbgPrint( "InitDMAAndIRQ: Cant Start Card\n");
 			NdisWriteErrorLogEntry (DriverHandle, Status, 0);
 			break;
 		}

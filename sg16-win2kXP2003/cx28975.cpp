@@ -386,11 +386,9 @@ bool AdapterDesc::start_cx28975 (PCVOID firmw_img, UINT firmw_len) {
 
     Debug (5, this, "Downloading firmware");
 
-    if (!download_firmware (PCBYTE (firmw_img), firmw_len)) {
-
-      break;
-
-    }
+    if (!download_firmware (PCBYTE (firmw_img), firmw_len))
+		break;
+    
 
     Debug (5, this, "Waiting for completion...");
 
@@ -554,18 +552,12 @@ bool AdapterDesc::start_cx28975 (PCVOID firmw_img, UINT firmw_len) {
 
 void AdapterDesc::ShutdownModem (void) {
 
-  Assert (HLDC && HLDC->IMR == 0);
-
-  if (ModemComplRtn) {
-
-    ModemCompletionRoutine const Rtn = ModemComplRtn;
-
-    ModemComplRtn = NULL;
-
-    (this->*Rtn) (DWORD_PTR (-1));
-
-  }
-
+	Assert (HLDC && HLDC->IMR == 0);
+	if (ModemComplRtn){
+		ModemCompletionRoutine const Rtn = ModemComplRtn;
+		ModemComplRtn = NULL;
+		(this->*Rtn) (DWORD_PTR (-1));
+	}
 }
 
 
