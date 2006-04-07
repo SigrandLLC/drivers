@@ -2,32 +2,32 @@
 #include <stdio.h>
 #include <stdarg.h>
 #ifdef _DEBUG
-UINT	DebugLevel = 5;
+UINT	DebugLevel=5;
 
 /* -----------------------------------------------------------------------------
  *
  ------------------------------------------------------------------------------- */
 void _UniCall
-DebugVPrintf(UINT const Level, AdapterDesc const *const Adapter, PCSTR const Fmt,
-			 va_list const Args)
+DebugVPrintf( UINT const Level, AdapterDesc const *const Adapter, PCSTR const Fmt,
+			  va_list const Args )
 {
-	if(Level >= DebugLevel)
+	if( Level >= DebugLevel )
 	{
 		char	Str[128];
-		vsprintf(Str, Fmt, Args);
+		vsprintf( Str, Fmt, Args );
 
 		LARGE_INTEGER	Time;
-		NdisGetCurrentSystemTime(&Time);
+		NdisGetCurrentSystemTime( &Time );
 
-		UINT const	MS = UINT(Time.QuadPart / 10000) % 100000;
-		PCSTR const Type = (Level < 9) ? " " : "***** ";
-		if(Adapter && Adapter->MemoryWindowAddr)
+		UINT const	MS=UINT( Time.QuadPart / 10000 ) % 100000;
+		PCSTR const Type=( Level < 9 ) ? " " : "***** ";
+		if( Adapter && Adapter->MemoryWindowAddr )
 		{
-			DbgPrint("sg16%c%05u %X:%s%s\n", Type[0], MS,
-					 Adapter->MemoryWindowAddr, Type, Str);
+			DbgPrint( "sg16%c%05u %X:%s%s\n", Type[0], MS,
+					  Adapter->MemoryWindowAddr, Type, Str );
 		} else
 		{
-			DbgPrint("sg16 %05u:%s%s\n", MS, Type, Str);
+			DbgPrint( "sg16 %05u:%s%s\n", MS, Type, Str );
 		}
 	}
 }
@@ -36,14 +36,14 @@ DebugVPrintf(UINT const Level, AdapterDesc const *const Adapter, PCSTR const Fmt
  *
  ------------------------------------------------------------------------------- */
 void _cdecl
-DebugPrintf(UINT const Level, AdapterDesc const *const Adapter, PCSTR const Fmt,
-			...)
+DebugPrintf( UINT const Level, AdapterDesc const *const Adapter, PCSTR const Fmt,
+			 ... )
 {
-	if(Level >= DebugLevel)
+	if( Level >= DebugLevel )
 	{
 		va_list Args;
-		va_start(Args, Fmt);
-		DebugVPrintf(Level, Adapter, Fmt, Args);
+		va_start( Args, Fmt );
+		DebugVPrintf( Level, Adapter, Fmt, Args );
 	}
 }
 
@@ -51,9 +51,9 @@ DebugPrintf(UINT const Level, AdapterDesc const *const Adapter, PCSTR const Fmt,
  *    Verify pointer validity
  ------------------------------------------------------------------------------- */
 bool _UniCall
-IsValidPtr(PCVOID Block, ULONG Size)
+IsValidPtr( PCVOID Block, ULONG Size )
 {
-	Assert(KeGetCurrentIrql() <= DISPATCH_LEVEL);
+	Assert( KeGetCurrentIrql() <= DISPATCH_LEVEL );
 	return
 		(
 			Block &&

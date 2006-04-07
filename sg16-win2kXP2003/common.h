@@ -18,8 +18,8 @@ extern "C"
 #endif
 extern "C"
 {
-ULONG			KeGetCurrentProcessorNumber(VOID);
-NTHALAPI KIRQL	KeGetCurrentIrql(VOID);
+ULONG	KeGetCurrentProcessorNumber( VOID );
+NTHALAPI KIRQL	KeGetCurrentIrql( VOID );
 }
 
 #include "params.h"

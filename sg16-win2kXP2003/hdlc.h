@@ -1,7 +1,7 @@
 #define NUM_HLDC_RING_ELEMS 128 /* Number of ring descriptors */
 
 /* Frame buffer size for HLDC. Must be multiple of 4 */
-#define DMA_BUFFER_SIZE ((ETHERNET_MAX_SIZE + 3) &~3)
+#define DMA_BUFFER_SIZE ( (ETHERNET_MAX_SIZE + 3) &~3 )
 
 /* -----------------------------------------------------------------------------
  *    HDLC register definitions
@@ -41,52 +41,52 @@ struct HldcRegs
 	 *
 	 --------------------------------------------------------------------------- */
 	BYTE
-	TestStatusBits(BYTE const Mask) const
+	TestStatusBits( BYTE const Mask ) const
 	{
-		return BYTE(SR & Mask);
+		return BYTE( SR & Mask );
 	}
 
 	/* -------------------------------------------------------------------------
 	 *
 	 --------------------------------------------------------------------------- */
 	void
-	ResetStatusBits(BYTE const Mask)
+	ResetStatusBits( BYTE const Mask )
 	{
-		SR = Mask;
+		SR=Mask;
 	}
 
 	/* -------------------------------------------------------------------------
 	 *
 	 --------------------------------------------------------------------------- */
 	void
-	SetIntMask(BYTE const Mask)
+	SetIntMask( BYTE const Mask )
 	{
-		IMR = Mask;
+		IMR=Mask;
 	}
 
 	/* -------------------------------------------------------------------------
 	 *
 	 --------------------------------------------------------------------------- */
 	void
-	EnableInts(BYTE const Mask)
+	EnableInts( BYTE const Mask )
 	{
-		SetBits(IMR, Mask);
+		SetBits( IMR, Mask );
 	}
 
 	/* -------------------------------------------------------------------------
 	 *
 	 --------------------------------------------------------------------------- */
 	void
-	DisableInts(BYTE const Mask)
+	DisableInts( BYTE const Mask )
 	{
-		ResetBits(IMR, Mask);
+		ResetBits( IMR, Mask );
 	}
 
 	/* -------------------------------------------------------------------------
 	 *
 	 --------------------------------------------------------------------------- */
 	BYTE
-	GetCTDR(void) const
+	GetCTDR( void ) const
 	{
 		return CTDR /* % NUM_HLDC_RING_ELEMS */ ;
 	}
@@ -95,7 +95,7 @@ struct HldcRegs
 	 *
 	 --------------------------------------------------------------------------- */
 	BYTE
-	GetLTDR(void) const
+	GetLTDR( void ) const
 	{
 		return LTDR /* % NUM_HLDC_RING_ELEMS */ ;
 	}
@@ -104,7 +104,7 @@ struct HldcRegs
 	 *
 	 --------------------------------------------------------------------------- */
 	BYTE
-	GetCRDR(void) const
+	GetCRDR( void ) const
 	{
 		return CRDR /* % NUM_HLDC_RING_ELEMS */ ;
 	}
@@ -113,7 +113,7 @@ struct HldcRegs
 	 *
 	 --------------------------------------------------------------------------- */
 	BYTE
-	GetLRDR(void) const
+	GetLRDR( void ) const
 	{
 		return LRDR /* % NUM_HLDC_RING_ELEMS */ ;
 	}
@@ -122,19 +122,19 @@ struct HldcRegs
 	 *
 	 --------------------------------------------------------------------------- */
 	static UINT
-	NextBD(UINT const BD)
+	NextBD( UINT const BD )
 	{
-		return(BD + 1) % NUM_HLDC_RING_ELEMS;
+		return( BD + 1 ) % NUM_HLDC_RING_ELEMS;
 	}
 };
-Assume(offsetof(HldcRegs, CRA) == 0);
-Assume(offsetof(HldcRegs, CRB) == 1);
-Assume(offsetof(HldcRegs, SR) == 2);
-Assume(offsetof(HldcRegs, IMR) == 3);
-Assume(offsetof(HldcRegs, CTDR) == 4);
-Assume(offsetof(HldcRegs, LTDR) == 5);
-Assume(offsetof(HldcRegs, CRDR) == 6);
-Assume(offsetof(HldcRegs, LRDR) == 7);
+Assume( offsetof(HldcRegs, CRA) == 0 );
+Assume( offsetof(HldcRegs, CRB) == 1 );
+Assume( offsetof(HldcRegs, SR) == 2 );
+Assume( offsetof(HldcRegs, IMR) == 3 );
+Assume( offsetof(HldcRegs, CTDR) == 4 );
+Assume( offsetof(HldcRegs, LTDR) == 5 );
+Assume( offsetof(HldcRegs, CRDR) == 6 );
+Assume( offsetof(HldcRegs, LRDR) == 7 );
 class	DmaBufferDesc
 {	/* DMA buffer descriptor */
 public:
@@ -160,12 +160,12 @@ public:
 	bool	inv;
 	bool	rburst;
 	bool	wburst;
-	Hdlc_Cfg(void)
+	Hdlc_Cfg( void )
 	{
-		crc16 = Hdlc_Crc16Def;
-		fill_7e = Hldc_Fill7eDef;
-		inv = Hldc_InvertedDef;
-		rburst = Hldc_ReadBurstDef;
-		wburst = Hldc_WriteBurstDef;
+		crc16=Hdlc_Crc16Def;
+		fill_7e=Hldc_Fill7eDef;
+		inv=Hldc_InvertedDef;
+		rburst=Hldc_ReadBurstDef;
+		wburst=Hldc_WriteBurstDef;
 	}
 };

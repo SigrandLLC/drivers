@@ -1,6 +1,6 @@
 #include <windows.h>
 #include <setupapi.h>
-#pragma warning(disable : 4201)
+#pragma warning( disable : 4201 )
 #include <winioctl.h>
 #include <stdio.h>
 #include <string.h>
@@ -8,48 +8,48 @@
 #include <ntddndis.h>
 #include "global.h"
 #include "api.h"
-#pragma comment(lib, "setupapi")
-#pragma comment(lib, "uuid")
+#pragma comment( lib, "setupapi" )
+#pragma comment( lib, "uuid" )
 #ifdef _DEBUG
 #define Debug	DebugPrint
 #else
-#define Debug(x)
-#pragma warning(disable : 4002 /* too many actual parameters for macro */ )
+#define Debug( x )
+#pragma warning( disable : 4002 /* too many actual parameters for macro */ )
 #endif
 
 /* -----------------------------------------------------------------------------
  *    Macros
  ------------------------------------------------------------------------------- */
 char inline
-CharToUpper(TCHAR const c)
+CharToUpper( TCHAR const c )
 {
-	return char(CharUpper(PTSTR(WORD(c))));
+	return char( CharUpper(PTSTR(WORD(c))) );
 }
 
-static char const	NetworkCardsKeyName[] = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\NetworkCards";
-static char const*	AdapterNameTpl;
-static bool			DoReset = false;
-static bool			Found = false;
+static char const	NetworkCardsKeyName[]= "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\NetworkCards";
+static char const	*AdapterNameTpl;
+static bool DoReset=false;
+static bool Found=false;
 
 /* -----------------------------------------------------------------------------
  *    Place error text
  ------------------------------------------------------------------------------- */
 PCSTR _UniCall
-ErrorText(DWORD Code)
+ErrorText( DWORD Code )
 {
 	static char Text[256];
-	wsprintf(Text, "%u/%u - ", HRESULT_FACILITY(Code), HRESULT_CODE(Code));
+	wsprintf( Text, "%u/%u - ", HRESULT_FACILITY(Code), HRESULT_CODE(Code) );
 
-	UINT	Offset = lstrlen(Text);
-	LPSTR	cp = Text + Offset;
-	UINT	Avail = sizeof(Text) - Offset - 1;
-	FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS |
-				  FORMAT_MESSAGE_MAX_WIDTH_MASK, NULL, Code,
-				  MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), cp, Avail, NULL);
-	cp += strlen(cp) - 1;
-	if(*cp == ' ')
+	UINT	Offset=lstrlen( Text );
+	LPSTR	cp=Text + Offset;
+	UINT	Avail=sizeof( Text ) - Offset - 1;
+	FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS |
+				   FORMAT_MESSAGE_MAX_WIDTH_MASK, NULL, Code,
+				   MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), cp, Avail, NULL );
+	cp+=strlen( cp ) - 1;
+	if( *cp == ' ' )
 	{
-		*cp = '\0';
+		*cp='\0';
 	}
 
 	return Text;
@@ -59,9 +59,9 @@ ErrorText(DWORD Code)
  *    Retrieve last error information
  ------------------------------------------------------------------------------- */
 PCSTR _UniCall
-LastErrorText(void)
+LastErrorText( void )
 {
-	return ErrorText(GetLastError());
+	return ErrorText( GetLastError() );
 }
 
 /* -----------------------------------------------------------------------------
@@ -69,15 +69,15 @@ LastErrorText(void)
  *    sequence or empty
  ------------------------------------------------------------------------------- */
 bool _UniCall
-IsTemplateMatching(PCSTR Template, PCSTR String)
+IsTemplateMatching( PCSTR Template, PCSTR String )
 {
-	while(*Template || *String)
+	while( *Template || *String )
 	{
-		switch(*Template)
+		switch( *Template )
 		{
 		case '?':
 			{
-				if(*String)
+				if( *String )
 				{
 					Template++;
 					String++;
@@ -90,12 +90,12 @@ IsTemplateMatching(PCSTR Template, PCSTR String)
 
 		case '*':
 			{
-				if(*++Template)
+				if( *++Template )
 				{
-					while(*String)
+					while( *String )
 					{
-						if(CharToUpper(*String) == CharToUpper(*Template) &&
-						   IsTemplateMatching(Template, String))
+						if( CharToUpper(*String) == CharToUpper(*Template) &&
+							IsTemplateMatching(Template, String) )
 						{
 							return true;
 						}
@@ -112,7 +112,7 @@ IsTemplateMatching(PCSTR Template, PCSTR String)
 
 		default:
 			{
-				if(CharToUpper(*Template++) != CharToUpper(*String++))
+				if( CharToUpper(*Template++) != CharToUpper(*String++) )
 				{
 					return false;
 				}
@@ -130,17 +130,17 @@ IsTemplateMatching(PCSTR Template, PCSTR String)
  *
  ------------------------------------------------------------------------------- */
 void _cdecl
-DebugPrint(PCSTR Fmt, ...)
+DebugPrint( PCSTR Fmt, ... )
 {
 	char	Str[256];
-	strcpy(Str, "sg16stat: ");
+	strcpy( Str, "sg16stat: " );
 
 	va_list Args;
-	va_start(Args, Fmt);
-	wvsprintf(Str + lstrlen(Str), Fmt, Args);
-	va_end(Args);
-	lstrcat(Str, "\n");
-	OutputDebugString(Str);
+	va_start( Args, Fmt );
+	wvsprintf( Str + lstrlen(Str), Fmt, Args );
+	va_end( Args );
+	lstrcat( Str, "\n" );
+	OutputDebugString( Str );
 }
 
 #endif /* _DEBUG */
@@ -149,75 +149,75 @@ DebugPrint(PCSTR Fmt, ...)
  *    Print with newline
  ------------------------------------------------------------------------------- */
 inline void _UniCall
-Print(FILE*	 Stream, PCSTR Fmt, va_list Args)
+Print( FILE *Stream, PCSTR Fmt, va_list Args )
 {
-	vfprintf(Stream, Fmt, Args);
-	fputc('\n', Stream);
+	vfprintf( Stream, Fmt, Args );
+	fputc( '\n', Stream );
 }
 
 /* -----------------------------------------------------------------------------
  *    Output to stdout
  ------------------------------------------------------------------------------- */
 void _cdecl
-StdOut(PCSTR Fmt, ...)
+StdOut( PCSTR Fmt, ... )
 {
 	va_list Args;
-	va_start(Args, Fmt);
-	Print(stdout, Fmt, Args);
-	va_end(Args);
+	va_start( Args, Fmt );
+	Print( stdout, Fmt, Args );
+	va_end( Args );
 }
 
 /* -----------------------------------------------------------------------------
  *    Output to stderr
  ------------------------------------------------------------------------------- */
 void _cdecl
-StdErr(PCSTR Fmt, ...)
+StdErr( PCSTR Fmt, ... )
 {
 	va_list Args;
-	va_start(Args, Fmt);
-	Print(stdout, Fmt, Args);
-	va_end(Args);
+	va_start( Args, Fmt );
+	Print( stdout, Fmt, Args );
+	va_end( Args );
 }
 
 /* -----------------------------------------------------------------------------
  *    Get friendly name of the adapter
  ------------------------------------------------------------------------------- */
 bool
-GetFriendlyName(PCSTR const Guid, PSTR const Name, DWORD NameLen)
+GetFriendlyName( PCSTR const Guid, PSTR const Name, DWORD NameLen )
 {
-	HKEY	NetKey = NULL;
-	bool	Success = false;
+	HKEY	NetKey=NULL;
+	bool	Success=false;
 	do
 	{
 #define GUID_DEVCLASS_NET_A "{4D36E972-E325-11CE-BFC1-08002BE10318}"
-		char	NetKeyName[256] = "SYSTEM\\CurrentControlSet\\Control\\Network\\"GUID_DEVCLASS_NET_A
-				"\\";
-		strcat(NetKeyName, Guid);
-		strcat(NetKeyName, "\\Connection");
+		char	NetKeyName[256]="SYSTEM\\CurrentControlSet\\Control\\Network\\"
+			GUID_DEVCLASS_NET_A "\\";
+		strcat( NetKeyName, Guid );
+		strcat( NetKeyName, "\\Connection" );
 
-		LONG	Res = RegOpenKeyEx(HKEY_LOCAL_MACHINE, NetKeyName, 0, KEY_READ,
-								   &NetKey);
-		if(Res != ERROR_SUCCESS)
+		LONG	Res=RegOpenKeyEx( HKEY_LOCAL_MACHINE, NetKeyName, 0, KEY_READ,
+								  &NetKey );
+		if( Res != ERROR_SUCCESS )
 		{
-			StdErr("Cannot open %s (%s)", NetKeyName, ErrorText(Res));
+			StdErr( "Cannot open %s (%s)", NetKeyName, ErrorText(Res) );
 			break;
 		}
 
-		static char const	NameValueName[] = "Name";
-		DWORD				ValueType;
-		Res = RegQueryValueEx(NetKey, NameValueName, NULL, &ValueType,
-							  PBYTE(Name), &NameLen);
-		if(Res != ERROR_SUCCESS)
+		static char const	NameValueName[]="Name";
+		DWORD	ValueType;
+		Res=RegQueryValueEx( NetKey, NameValueName, NULL, &ValueType,
+							 PBYTE(Name), &NameLen );
+		if( Res != ERROR_SUCCESS )
 		{
-			StdErr("Cannot get %s value (%s)", NameValueName, ErrorText(Res));
+			StdErr( "Cannot get %s value (%s)", NameValueName, ErrorText(Res) );
 			break;
 		}
 
-		Success = true;
-	} while(False);
-	if(NetKey)
+		Success=true;
+	} while( False );
+	if( NetKey )
 	{
-		RegCloseKey(NetKey);
+		RegCloseKey( NetKey );
 	}
 
 	return Success;
@@ -227,44 +227,44 @@ GetFriendlyName(PCSTR const Guid, PSTR const Name, DWORD NameLen)
  *
  ------------------------------------------------------------------------------- */
 static void
-Format(StatDesc const *const stat)
+Format( StatDesc const *const stat )
 {
-	StdOut("\nReceived frames: %I64u\nSent frames:     %I64u\nCRC errors:      %I64u\nFIFO overflows:  %u\nFIFO underflows: %u"
-			   , stat->rcvd_pkts, stat->sent_pkts, stat->crc_errs,
-		   stat->ufl_errs, stat->ofl_errs);
+	StdOut( "\nReceived frames: %I64u\nSent frames:     %I64u\nCRC errors:      %I64u\nFIFO overflows:  %u\nFIFO underflows: %u"
+				, stat->rcvd_pkts, stat->sent_pkts, stat->crc_errs,
+			stat->ufl_errs, stat->ofl_errs );
 
 	/*
 	 * if( stat->last_time ) printf( "\tLast connect at %s\n", ctime(
 	 * &stat->last_time ) );
 	 */
-	switch(stat->status_1 >> 6)
+	switch( stat->status_1 >> 6 )
 	{
 	case 0:
 		{
-			static char const*	szStatus3[] =
+			static char const	*szStatus3[]=
 			{
 				"Bad NMR",
 				"Frequency lock failed",
 				"Pre-activation failed",
 				"Sync word detect failed"
 			};
-			StdOut("\nInactive (%s)", szStatus3[stat->status_3 & 0x0F]);
+			StdOut( "\nInactive (%s)", szStatus3[stat->status_3 & 0x0F] );
 			break;
 		}
 
 	case 1:
-		StdOut("\nLink established\n\nLine attenuation: %5.1f dB\nNoise Margin:     %+5.1f dB\nPower back-off:   near-end - %u dB, far-end - %u dB\n\nSHDSL counters:\n  Out-of-sync:     %u\n  Loss of signal:  %u\n  Bad CRC:         %u\n  Segment defect:  %u\n  Segment anomaly: %u\n"
-				   , (( double ) stat->attenuat) / 2.0, (( double ) stat->nmr) / 2.0,
-			   stat->tpbo, stat->rpbo, stat->losw, stat->losd, stat->crc,
-			   stat->segd, stat->sega);
+		StdOut( "\nLink established\n\nLine attenuation: %5.1f dB\nNoise Margin:     %+5.1f dB\nPower back-off:   near-end - %u dB, far-end - %u dB\n\nSHDSL counters:\n  Out-of-sync:     %u\n  Loss of signal:  %u\n  Bad CRC:         %u\n  Segment defect:  %u\n  Segment anomaly: %u\n"
+					, (( double ) stat->attenuat) / 2.0,
+				(( double ) stat->nmr) / 2.0, stat->tpbo, stat->rpbo,
+				stat->losw, stat->losd, stat->crc, stat->segd, stat->sega );
 		break;
 
 	case 2:
-		StdOut("\nNo link");
+		StdOut( "\nNo link" );
 		break;
 
 	case 3:
-		StdOut("\nLink negotiation in progress");
+		StdOut( "\nLink negotiation in progress" );
 		break;
 	}
 }
@@ -273,114 +273,114 @@ Format(StatDesc const *const stat)
  *
  ------------------------------------------------------------------------------- */
 static void
-PrintStat(PCSTR const Guid)
+PrintStat( PCSTR const Guid )
 {
 	NDIS_OID	OidCode;
-	DWORD		ReturnedCount;
-	char		DevName[64], Vendor[64];
-	BYTE		MACAddr[6];
-	strcpy(DevName, "\\\\.\\");
-	strcat(DevName, Guid);
+	DWORD	ReturnedCount;
+	char	DevName[64], Vendor[64];
+	BYTE	MACAddr[6];
+	strcpy( DevName, "\\\\.\\" );
+	strcat( DevName, Guid );
 
-	HANDLE	handle = INVALID_HANDLE_VALUE;
+	HANDLE	handle=INVALID_HANDLE_VALUE;
 	do
 	{
-		handle = CreateFile(DevName, GENERIC_READ,
-							FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-							OPEN_EXISTING, 0, INVALID_HANDLE_VALUE);
-		if(handle == INVALID_HANDLE_VALUE)
+		handle=CreateFile( DevName, GENERIC_READ,
+						   FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+						   OPEN_EXISTING, 0, INVALID_HANDLE_VALUE );
+		if( handle == INVALID_HANDLE_VALUE )
 		{
-			if(GetLastError() != ERROR_FILE_NOT_FOUND)
+			if( GetLastError() != ERROR_FILE_NOT_FOUND )
 			{
-				StdErr("Cannot open driver %s (%s)", Guid, LastErrorText());
+				StdErr( "Cannot open driver %s (%s)", Guid, LastErrorText() );
 			}
 
 			break;
 		}
 
-		OidCode = OID_GEN_VENDOR_DESCRIPTION;
-		if(!DeviceIoControl(handle, IOCTL_NDIS_QUERY_GLOBAL_STATS, &OidCode,
-		   sizeof OidCode, Vendor, sizeof(Vendor), &ReturnedCount, NULL))
+		OidCode=OID_GEN_VENDOR_DESCRIPTION;
+		if( !DeviceIoControl(handle, IOCTL_NDIS_QUERY_GLOBAL_STATS, &OidCode,
+			sizeof OidCode, Vendor, sizeof(Vendor), &ReturnedCount, NULL) )
 		{
-			StdErr("Cannot query vendor desc (%s)", LastErrorText());
+			StdErr( "Cannot query vendor desc (%s)", LastErrorText() );
 			break;
 		}
 
-		if(strncmp(Vendor, "Sigrand", 6))
+		if( strncmp(Vendor, "Sigrand", 6) )
 		{
 			break;
 		}
 
 		char	Name[256];
-		if(!GetFriendlyName(Guid, Name, sizeof(Name)))
+		if( !GetFriendlyName(Guid, Name, sizeof(Name)) )
 		{
-			strcpy(Name, "?");
+			strcpy( Name, "?" );
 		}
 
-		if(!IsTemplateMatching(AdapterNameTpl, Name))
+		if( !IsTemplateMatching(AdapterNameTpl, Name) )
 		{
 			break;
 		}
 
-		Found = true;
-		StdOut("\n\n%s (%s)", Name, Guid);
-		if(DoReset)
+		Found=true;
+		StdOut( "\n\n%s (%s)", Name, Guid );
+		if( DoReset )
 		{
-			OidCode = OID_PRIVATE_CLEAR_STAT;
+			OidCode=OID_PRIVATE_CLEAR_STAT;
 
-			static DWORD	KeyId = StatKey;
-			if(DeviceIoControl(handle, IOCTL_NDIS_QUERY_GLOBAL_STATS, &OidCode,
-			   sizeof OidCode, &KeyId, sizeof(KeyId), &ReturnedCount, NULL))
+			static DWORD	KeyId=StatKey;
+			if( DeviceIoControl(handle, IOCTL_NDIS_QUERY_GLOBAL_STATS, &OidCode,
+				sizeof OidCode, &KeyId, sizeof(KeyId), &ReturnedCount, NULL) )
 			{
-				StdOut("Modem stat counters are resetted");
+				StdOut( "Modem stat counters are resetted" );
 			} else
 			{
-				StdErr("Cannot clear stat (%s)", LastErrorText());
+				StdErr( "Cannot clear stat (%s)", LastErrorText() );
 			}
 
 			break;
 		}
 
-		OidCode = OID_802_3_CURRENT_ADDRESS;
-		if(!DeviceIoControl(handle, IOCTL_NDIS_QUERY_GLOBAL_STATS, &OidCode,
-		   sizeof OidCode, MACAddr, sizeof(MACAddr), &ReturnedCount, NULL))
+		OidCode=OID_802_3_CURRENT_ADDRESS;
+		if( !DeviceIoControl(handle, IOCTL_NDIS_QUERY_GLOBAL_STATS, &OidCode,
+			sizeof OidCode, MACAddr, sizeof(MACAddr), &ReturnedCount, NULL) )
 		{
-			StdErr("Cannot get MAC address (%s)", LastErrorText());
+			StdErr( "Cannot get MAC address (%s)", LastErrorText() );
 			break;
 		}
 
-		if(ReturnedCount != 6)
+		if( ReturnedCount != 6 )
 		{
-			StdErr("Incorrect MAC address length (%u)", ReturnedCount);
+			StdErr( "Incorrect MAC address length (%u)", ReturnedCount );
 			break;
 		}
 
-		StdOut("Network address: %02X-%02X-%02X-%02X-%02X-%02X", MACAddr[0],
-			   MACAddr[1], MACAddr[2], MACAddr[3], MACAddr[4], MACAddr[5]);
+		StdOut( "Network address: %02X-%02X-%02X-%02X-%02X-%02X", MACAddr[0],
+				MACAddr[1], MACAddr[2], MACAddr[3], MACAddr[4], MACAddr[5] );
 
 		StatDesc	StatBuffer;
-		OidCode = OID_PRIVATE_READ_STAT;
-		*PDWORD(&StatBuffer) = StatKey;
-		if(!DeviceIoControl(handle, IOCTL_NDIS_QUERY_GLOBAL_STATS, &OidCode,
-		   sizeof(OidCode), &StatBuffer, sizeof(StatBuffer), &ReturnedCount,
-		   NULL))
+		OidCode=OID_PRIVATE_READ_STAT;
+		*PDWORD( &StatBuffer )=StatKey;
+		if( !DeviceIoControl(handle, IOCTL_NDIS_QUERY_GLOBAL_STATS, &OidCode,
+			sizeof(OidCode), &StatBuffer, sizeof(StatBuffer), &ReturnedCount,
+			NULL) )
 		{
-			StdErr("Cannot read stat (%s)", LastErrorText());
+			StdErr( "Cannot read stat (%s)", LastErrorText() );
 			break;
 		}
 
-		if(ReturnedCount != sizeof(StatDesc))
+		if( ReturnedCount != sizeof(StatDesc) )
 		{
-			StdErr("Returned %u bytes instead of %u", ReturnedCount,
-				   sizeof(StatDesc));
+			StdErr( "Returned %u bytes instead of %u", ReturnedCount,
+					sizeof(StatDesc) );
 			break;
 		}
 
-		Format(&StatBuffer);
-	} while(False);
-	if(handle != INVALID_HANDLE_VALUE)
+		Format( &StatBuffer );
+	} while( False );
+	if( handle != INVALID_HANDLE_VALUE )
 	{
-		CloseHandle(handle);
+		CloseHandle( handle );
 	}
 }
 
@@ -388,99 +388,99 @@ PrintStat(PCSTR const Guid)
  *
  ------------------------------------------------------------------------------- */
 int _cdecl
-main(int ArgC, char*  ArgV[])
+main( int ArgC, char *ArgV[] )
 {
-	int		ExitCode = 1;
-	HKEY	MainKey = NULL;
+	int ExitCode=1;
+	HKEY	MainKey=NULL;
 	do
 	{
-		if(ArgC == 1)
+		if( ArgC == 1 )
 		{
-			StdOut("\nusage: sg16stat [-r] <Name>\n\n  <Name> - adapter name template (? and * allowed)\n  -r - reset modem stat counters\n");
-			ExitCode = 1;
+			StdOut( "\nusage: sg16stat [-r] <Name>\n\n  <Name> - adapter name template (? and * allowed)\n  -r - reset modem stat counters\n" );
+			ExitCode=1;
 			break;
 		}
 
-		for(int ArgN = 1; ArgN < ArgC && ArgV[ArgN][0] == '-'; ArgN++)
+		for( int ArgN=1; ArgN < ArgC && ArgV[ArgN][0] == '-'; ArgN++ )
 		{
-			if(!strcmp(ArgV[ArgN] + 1, "r"))
+			if( !strcmp(ArgV[ArgN] + 1, "r") )
 			{
-				DoReset = true;
+				DoReset=true;
 			}
 		}
 
-		if(ArgN == ArgC)
+		if( ArgN == ArgC )
 		{
-			StdErr("No adapter name specified");
-			ExitCode = 2;
+			StdErr( "No adapter name specified" );
+			ExitCode=2;
 			break;
 		}
 
-		AdapterNameTpl = ArgV[ArgN];
+		AdapterNameTpl=ArgV[ArgN];
 
-		LONG	Res = RegOpenKeyEx(HKEY_LOCAL_MACHINE, NetworkCardsKeyName, 0,
-								   KEY_READ, &MainKey);
-		if(Res != ERROR_SUCCESS)
+		LONG	Res=RegOpenKeyEx( HKEY_LOCAL_MACHINE, NetworkCardsKeyName, 0,
+								  KEY_READ, &MainKey );
+		if( Res != ERROR_SUCCESS )
 		{
-			StdErr("Cannot open %s (%s)", NetworkCardsKeyName, ErrorText(Res));
-			ExitCode = 3;
+			StdErr( "Cannot open %s (%s)", NetworkCardsKeyName, ErrorText(Res) );
+			ExitCode=3;
 			break;
 		}
 
-		for(UINT i = 0;; i++)
+		for( UINT i=0;; i++ )
 		{
 			char	CardKeyName[64];
-			Res = RegEnumKey(MainKey, i, CardKeyName, sizeof(CardKeyName));
-			if(Res != ERROR_SUCCESS)
+			Res=RegEnumKey( MainKey, i, CardKeyName, sizeof(CardKeyName) );
+			if( Res != ERROR_SUCCESS )
 			{
-				if(Res != ERROR_NO_MORE_ITEMS)
+				if( Res != ERROR_NO_MORE_ITEMS )
 				{
-					StdErr("Cannot enumerate %s (%s)", NetworkCardsKeyName,
-						   ErrorText(Res));
+					StdErr( "Cannot enumerate %s (%s)", NetworkCardsKeyName,
+							ErrorText(Res) );
 				}
 
 				break;
 			}
 
-			HKEY	SrvKey = NULL;
+			HKEY	SrvKey=NULL;
 			do
 			{
-				Res = RegOpenKeyEx(MainKey, CardKeyName, 0, KEY_READ, &SrvKey);
-				if(Res != ERROR_SUCCESS)
+				Res=RegOpenKeyEx( MainKey, CardKeyName, 0, KEY_READ, &SrvKey );
+				if( Res != ERROR_SUCCESS )
 				{
-					StdErr("Cannot open %s (%s)", CardKeyName, ErrorText(Res));
+					StdErr( "Cannot open %s (%s)", CardKeyName, ErrorText(Res) );
 					break;
 				}
 
-				static char const	ServiceValueName[] = "ServiceName";
-				char				Data[128];
-				DWORD				DataLen = sizeof(Data);
-				DWORD				ValueType;
-				Res = RegQueryValueEx(SrvKey, ServiceValueName, NULL,
-									  &ValueType, PBYTE(Data), &DataLen);
-				if(Res != ERROR_SUCCESS)
+				static char const	ServiceValueName[]="ServiceName";
+				char	Data[128];
+				DWORD	DataLen=sizeof( Data );
+				DWORD	ValueType;
+				Res=RegQueryValueEx( SrvKey, ServiceValueName, NULL, &ValueType,
+									 PBYTE(Data), &DataLen );
+				if( Res != ERROR_SUCCESS )
 				{
-					StdErr("Cannot get %s value (%s)", ServiceValueName,
-						   ErrorText(Res));
+					StdErr( "Cannot get %s value (%s)", ServiceValueName,
+							ErrorText(Res) );
 					break;
 				}
 
-				PrintStat(Data);
-			} while(False);
-			if(SrvKey)
+				PrintStat( Data );
+			} while( False );
+			if( SrvKey )
 			{
-				RegCloseKey(SrvKey);
+				RegCloseKey( SrvKey );
 			}
 		}
 
-		if(!Found)
+		if( !Found )
 		{
-			StdErr("Adapter %s not found", AdapterNameTpl);
+			StdErr( "Adapter %s not found", AdapterNameTpl );
 		}
-	} while(False);
-	if(MainKey)
+	} while( False );
+	if( MainKey )
 	{
-		RegCloseKey(MainKey);
+		RegCloseKey( MainKey );
 	}
 
 	return ExitCode;
