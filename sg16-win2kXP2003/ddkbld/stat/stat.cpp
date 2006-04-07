@@ -1,1 +1,1 @@
-#include "..\..\stat.cpp"
+#include "../../stat.cpp"

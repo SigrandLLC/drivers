@@ -49,14 +49,14 @@ BEGIN
             VALUE "Comments", "\0"
             VALUE "CompanyName", "Sigrand LLC\0"
             VALUE "FileDescription", "NDIS 5.0 miniport driver\0"
-            VALUE "FileVersion", "1.26\0"
+            VALUE "FileVersion", "1.1\0"
             VALUE "InternalName", "SG16.SYS\0"
             VALUE "LegalCopyright", "(C) Sigrand, LLC, 2002-2004.\0"
             VALUE "LegalTrademarks", "\0"
             VALUE "OriginalFilename", "SG16.SYS\0"
             VALUE "PrivateBuild", "\0"
             VALUE "ProductName", "Sigrand SG16-PCI SHDSL Modem Driver\0"
-            VALUE "ProductVersion", "1.0\0"
+            VALUE "ProductVersion", "1.1\0"
             VALUE "SpecialBuild", "\0"
         END
     END

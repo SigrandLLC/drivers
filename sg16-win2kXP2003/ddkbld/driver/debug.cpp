@@ -1,1 +1,1 @@
-#include "..\..\debug.cpp"
+#include "../../debug.cpp"

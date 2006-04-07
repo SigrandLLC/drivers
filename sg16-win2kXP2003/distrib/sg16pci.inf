@@ -1,11 +1,11 @@
 ;******************************************************************************
 ;
-; NETSB16.INF
+; SG16PCI.INF
 ;
-; Sigrand SG-16PCI-SHDSL PCI Modem Driver (NDIS 5.0)
+; Sigrand SG-16PCI sHDSL Modem Driver (NDIS 5.0)
 ; for Windows 2000 and XP
 ;
-; Copyright (c) Sigrand, LLC. 2002-2003.
+; Copyright (c) Sigrand LLC. 2006.
 ;
 ;******************************************************************************
 
@@ -14,7 +14,7 @@ Signature	="$Windows NT$"
 Class		= Net
 ClassGuid 	= {4D36E972-E325-11CE-BFC1-08002BE10318}
 Provider	= %V_PROVIDER%
-DriverVer	= 12/01/2004,1.10.0.0
+DriverVer	= 06/04/2006,1.1
 
 [Manufacturer]
 %V_Sigrand%	= Sigrand
@@ -28,22 +28,22 @@ sg16.bin = 50
 
 
 [Sigrand]
-%SBNIPCI.Desc%=sbnipci.ndi,PCI\VEN_0055&DEV_009D
+%SG16PCI.Desc%=sg16pci.ndi,PCI\VEN_0055&DEV_009D
 
-[SBNIPCI.NDI]
+[SG16PCI.NDI]
 Characteristics = 0x84
 BusType         = 5
-AddReg		= SBNIPCI.ndi.reg, SBNI.ndi.reg, SBNI.ndi.param.reg
-;AddReg		= SBNI.ndi.adv.param.reg
-CopyFiles	= SBNI.ndis5.CopyFiles,SBNI.sg16bin.CopyFiles,SBNI.stat.CopyFiles
+AddReg		= SG16PCI.ndi.reg, SG16.ndi.reg, SG16.ndi.param.reg
+;AddReg		= SG16.ndi.adv.param.reg
+CopyFiles	= SG16.ndis5.CopyFiles,SG16.sg16bin.CopyFiles,SG16.stat.CopyFiles
 
-[SBNIPCI.NDI.Services]
-AddService 	= SG-16PCI, 2, SBNI.Service, common.EventLog
+[SG16PCI.NDI.Services]
+AddService 	= SG-16PCI, 2, SG16.Service, common.EventLog
 
-[SBNIPCI.ndi.reg]
+[SG16PCI.ndi.reg]
 HKR, Ndi, DeviceID, , "PCI\VEN_0055&DEV_009D"
 
-[SBNI.ndi.reg]
+[SG16.ndi.reg]
 ; NDIS Info
 HKR, Ndi,       Service,    0, "SG-16PCI"
 HKR, NDIS,	MajorNdisVersion,1,03
@@ -53,7 +53,7 @@ HKR,,MediaType,0,1
 HKR, Ndi\Interfaces,UpperRange,,"ndis5"
 HKR, Ndi\Interfaces,LowerRange,,"ethernet"
 
-[SBNI.ndi.param.reg]
+[SG16.ndi.param.reg]
 
 ; SG-16PCI private params
 
@@ -130,7 +130,7 @@ HKR,NDI\params\WriteBurst,Default,,"1"
 HKR,NDI\params\WriteBurst\enum,0,,"Disable"
 HKR,NDI\params\WriteBurst\enum,1,,"Enable"
 
-[SBNI.ndi.adv.param.reg]
+[SG16.ndi.adv.param.reg]
 
 HKR,NDI\params\AlwaysConnected,ParamDesc,,"Always connected"
 HKR,NDI\params\AlwaysConnected,Type,,"enum"
@@ -154,8 +154,8 @@ HKR,NDI\params\RcvQueueLen,Max,,"128"
 HKR,NDI\params\RcvQueueLen,Step,,"8"
 HKR,NDI\params\RcvQueueLen,Default,,"8"
 
-[SBNI.Service]
-DisplayName     =   %SBNI.Service.DispName%
+[SG16.Service]
+DisplayName     =   %SG16.Service.DispName%
 ServiceType     =   1 ;%SERVICE_KERNEL_DRIVER%
 StartType       =   3 ;%SERVICE_DEMAND_START%
 ErrorControl    =   1 ;%SERVICE_ERROR_NORMAL%
@@ -169,13 +169,13 @@ AddReg = common.AddEventLog.reg
 HKR, , EventMessageFile, 0x00020000, "%%SystemRoot%%\System32\netevent.dll"
 HKR, , TypesSupported,   0x00010001, 7
 
-[SBNI.ndis5.CopyFiles]
+[SG16.ndis5.CopyFiles]
 sg16pci.sys,,,2
 
-[SBNI.sg16bin.CopyFiles]
+[SG16.sg16bin.CopyFiles]
 sg16.bin,,,2
 
-[SBNI.stat.CopyFiles]
+[SG16.stat.CopyFiles]
 sg16stat.exe,,,2
 
 ;****************************************************************************
@@ -183,13 +183,13 @@ sg16stat.exe,,,2
 ;****************************************************************************
 
 [DestinationDirs]
-SBNI.ndis5.CopyFiles = 12
+SG16.ndis5.CopyFiles = 12
 
 [DestinationDirs]
-SBNI.sg16bin.CopyFiles  = 12
+SG16.sg16bin.CopyFiles  = 12
 
 [DestinationDirs]
-SBNI.stat.CopyFiles  = 11
+SG16.stat.CopyFiles  = 11
 
 ;****************************************************************************
 ; Localizable Strings
@@ -203,6 +203,6 @@ V_PROVIDER = "Sigrand LLC."
 V_Sigrand   = "Sigrand LLC."
 
 ; Sigrand Devices
-SBNIPCI.Desc="Sigrand SG-16PCI SHDSL Modem"
+SG16PCI.Desc="Sigrand SG-16PCI SHDSL Modem"
 
-SBNI.Service.DispName = "Sigrand SG-16PCI SHDSL Modem Driver"
+SG16.Service.DispName = "Sigrand SG-16PCI SHDSL Modem Driver"

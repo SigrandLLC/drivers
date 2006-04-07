@@ -1,1 +1,1 @@
-#include "..\..\initterm.cpp"
+#include "../../initterm.cpp"
