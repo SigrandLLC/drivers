@@ -108,17 +108,13 @@ MODULE_VERSION("2.0");
 /*Debug parameters*/
 //#define DEBUG_ON
 
-#define DEBUG_PRN(x) 
+#define PDEBUG(fmt,args...) 
 #ifdef DEBUG_ON
-#undef DEBUG_PRN
-#define DEBUG_PRN(x) printk(KERN_NOTICE x );
+#	undef PDEBUG
+#	define PDEBUG(fmt,args...) \
+		    printk(KERN_NOTICE "sg16lan.c: " fmt " \n", ## args  )
 #endif
 
-#define DEBUG_PRN1(x, param ) 
-#ifdef DEBUG_ON
-#undef DEBUG_PRN1
-#define DEBUG_PRN1(x, param) printk(KERN_NOTICE x, param );
-#endif
 
 //static int FLG=0;
 
@@ -788,7 +784,7 @@ shdsl_dload_fw(struct device *dev)
     for(i=0;i< fw->size;i++)
     	cksum += fw->data[i];
 
-    DEBUG_PRN("shdsl_download_fw: fw requested\n");
+    PDEBUG("fw requested");
 /* 2.Prepare to download process */
     hdlc_shutdown(nl);
     udelay(10);
@@ -804,7 +800,7 @@ shdsl_dload_fw(struct device *dev)
     t = fw->size;
     if( shdsl_issue_cmd( nl, _DSL_DOWNLOAD_START, (u8 *) &t, 4 ) )
     	goto err_exit;
-DEBUG_PRN("dload: start\n");
+    PDEBUG("dload start");
     for( i = 0, img_len=fw->size;  img_len >= 75;  i += 75, img_len -= 75 )
 	if( shdsl_issue_cmd( nl, _DSL_DOWNLOAD_DATA, fw->data + i, 75 ) )
     	goto err_exit;
@@ -814,7 +810,7 @@ DEBUG_PRN("dload: start\n");
     t = (cksum ^ 0xff) + 1;
     if( shdsl_issue_cmd( nl, _DSL_DOWNLOAD_END, (u8 *) &t, 1 ) )
     	goto err_exit;
-DEBUG_PRN("dload: end\n");
+    PDEBUG("dload end");
 /* 4.Check that donload is successfull */
     udelay(10);
     if( !shdsl_ready(nl,_ACK_OPER_WAKE_UP) )
@@ -1085,13 +1081,6 @@ shdsl_interrupt( struct net_device  *ndev )
     // inquiry answer     
     else
     {
-
-/*
-if( FLG ){
-    DEBUG_PRN("sg16_irq: reset fifo interrupt\n");
-    FLG=0;
-}
-*/	    
 	nl->irqret=ioread8( (iotype)&(p->out_ack) );
 	wake_up( &nl->wait_for_intr );	
     }
@@ -1119,7 +1108,7 @@ shdsl_link_chk( unsigned long data )
         // link up
 	if( ( ioread8( (iotype)( (u8*)p + 0x3c0) ) & 0xc0) == 0x40 )
 	{
-	    DEBUG_PRN(KERN_NOTICE"Activate\n");
+	    PDEBUG("Activate");
 	    // set hdlc registers
 	    iowrite8( ioread8( (iotype)&(nl->regs->CRB) ) & ~RXDE,
 			(iotype)&(nl->regs->CRB) );
@@ -1147,7 +1136,7 @@ shdsl_link_chk( unsigned long data )
 	else 
 	if( ( ioread8( (iotype)((u8*)p + 0x3c0) ) & 0xc0) != 0x40 )
 	{
-	    DEBUG_PRN(KERN_NOTICE"Deactivate\n");
+	    PDEBUG("Deactivate");
 		
 	    iowrite8( ioread8( (iotype)&(nl->regs->CRB) ) | RXDE,
 			(iotype)&(nl->regs->CRB) );
@@ -1216,7 +1205,7 @@ sg16_start_xmit( struct sk_buff *skb, struct net_device *ndev )
     nl->xq[ nl->tail_xq++ ] = skb;
     nl->tail_xq &= (XQLEN - 1);
     cur_tbd = ioread8( (iotype)&(nl->regs->LTDR)) & 0x7f;
-    iowrite32( cpu_to_le32( virt_to_bus(skb->data) ) , (iotype)&(nl->tbd[ cur_tbd ].address) ) ;
+    iowrite32( cpu_to_le32( bus_addr ) , (iotype)&(nl->tbd[ cur_tbd ].address) ) ;
     iowrite32( cpu_to_le32( skb->len | LAST_FRAG ),(iotype)&(nl->tbd[ cur_tbd ].length ) ) ;
     cur_tbd = (cur_tbd + 1) & 0x7f;
     iowrite8(cur_tbd,(iotype)&(nl->regs->LTDR));
@@ -1249,6 +1238,7 @@ recv_init_frames( struct net_device *dev )
 
     while( nl->head_rdesc != cur_rbd ) {
 
+	PDEBUG("Get packet");
 	struct sk_buff  *skb = nl->rq[ nl->head_rq++ ];
 	nl->head_rq &= (RQLEN - 1);
 
@@ -2234,8 +2224,8 @@ store_debug( struct device *dev, ADDIT_ATTR const char *buff, size_t size )
 
     ptr=bf;
     cmd=simple_strtoul( ptr,&endp,16);
-DEBUG_PRN1("DEBUG: cmd=%x\n",cmd);    
-DEBUG_PRN1("DEBUG: endp=%x\n",endp);    
+    PDEBUG("DEBUG: cmd=%x",cmd);    
+    PDEBUG("DEBUG: endp=%x",endp);    
 
     while( ( ptr-bf < len) && *endp ){
 	ptr=endp;
@@ -2244,11 +2234,10 @@ DEBUG_PRN1("DEBUG: endp=%x\n",endp);
 	if( (ptr-bf)>=len )
 	    break;
 	args[i]=(u8)simple_strtoul( ptr,&endp,16);
-DEBUG_PRN1("DEBUG: args[i]=%x\n",args[i]);    	
-
+	PDEBUG("DEBUG: args[i]=%x",args[i]);    	
 	i++;
     }
-DEBUG_PRN1("DEBUG: i=%d\n",i);    		
+    PDEBUG("DEBUG: i=%d",i);    		
     if( shdsl_issue_cmd(nl,cmd,args,i) ){
 	sprintf(mem_ret,"cmd: error");
 	return size;
