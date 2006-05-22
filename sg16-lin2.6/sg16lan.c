@@ -112,7 +112,7 @@ MODULE_VERSION("2.0");
 #ifdef DEBUG_ON
 #	undef PDEBUG
 #	define PDEBUG(fmt,args...) \
-		    printk(KERN_NOTICE "sg16lan.c: " fmt " \n", ## args  )
+		    printk(KERN_NOTICE "sg16lan.c(%s): " fmt " \n",__FUNCTION__, ## args  )
 #endif
 
 
@@ -126,6 +126,14 @@ MODULE_VERSION("2.0");
 #define SIOCDEVLOADFW	 	SIOCDEVPRIVATE
 #define SIOCDEVGETSTATS	 	SIOCDEVPRIVATE+1
 #define SIOCDEVCLRSTATS	 	SIOCDEVPRIVATE+2
+
+/* Portability */
+#ifdef NO_IO_READ_WRITE
+#       define iowrite8(val,addr)  writeb(val,addr)
+#       define iowrite32(val,addr)  writel(val,addr)
+#       define ioread8(addr) readb(addr)
+#       define ioread32(addr) readl(addr)
+#endif
 
 /* -------------------------------------------------------------------------- */
 
@@ -278,7 +286,7 @@ static void  sg16_tx_timeout( struct net_device * );
 /*- Sysfs specific functions -*/
 
 #define ADDIT_ATTR
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,12)
+#if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,12)
 #undef ADDIT_ATTR
 #define ADDIT_ATTR struct device_attribute *attr,
 #endif    
@@ -407,7 +415,8 @@ sg16_init_one( struct pci_dev  *pdev,  const struct pci_device_id  *ent )
 
     if( pci_enable_device( pdev ) )
     	return  -EIO;
-    
+    pci_set_master(pdev);
+        
     /* register network device */
 	if( !( ndev = alloc_netdev( sizeof(struct net_local),"dsl%d",dsl_init)) )
 	    return  -ENOMEM;
@@ -753,9 +762,13 @@ shdsl_ready( struct net_local *nl, u16 expect_state)
     u8 ret_val=1;
     u32 ret;
 
-    ret=interruptible_sleep_on_timeout( &nl->wait_for_intr, HZ*10 );
-    if( ( nl->irqret & 0x1f) != expect_state )
-	ret_val=0;
+    if( (nl->irqret & 0x1f) != expect_state ){
+	ret=interruptible_sleep_on_timeout( &nl->wait_for_intr, HZ*10 );
+	if( ( nl->irqret & 0x1f) != expect_state ){
+    	    PDEBUG("fail wait, irqret=%02x expect=%02x",nl->irqret & 0x1f,0xff &
+	    ret_val=0;
+       }
+    }
 
     nl->irqret=0;
     return ret_val;
@@ -1110,11 +1123,11 @@ shdsl_link_chk( unsigned long data )
 	{
 	    PDEBUG("Activate");
 	    // set hdlc registers
+	    iowrite8( 0xff, (iotype)&(nl->regs->SR) );    				    
 	    iowrite8( ioread8( (iotype)&(nl->regs->CRB) ) & ~RXDE,
 			(iotype)&(nl->regs->CRB) );
 	    iowrite8( EXT | UFL | OFL | RXS | TXS ,
 			(iotype)&(nl->regs->IMR) );    			
-	    iowrite8( CRC, (iotype)&(nl->regs->SR) );    			
 	    do_gettimeofday( &tv );
 	    nl->in_stats.last_time = tv.tv_sec;
 	    //reset Rx FIFO	    
