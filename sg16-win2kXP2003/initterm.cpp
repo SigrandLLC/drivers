@@ -1,4 +1,5 @@
 #include "common.h"
+#include <ndis.h>
 
 /* AdapterDesc class functionsConstructor */
 AdapterDesc::	AdapterDesc ( void )
@@ -474,6 +475,10 @@ AdapterDesc::Init( NDIS_HANDLE MPH, NDIS_HANDLE WrapperConfigurationContext )
 		Reset();
 		FillRcvQueue();
 		Status=NDIS_STATUS_SUCCESS;
+		NdisMInitializeTimer(	&LinkTimer,
+								DriverHandle,
+								LinkCheckFunc,
+								(PVOID)this );
 	} while( False );
 	if( Status != NDIS_STATUS_SUCCESS )
 	{
@@ -498,7 +503,8 @@ AdapterDesc::Term( void )
 		CancelRxPackets();
 		Unlock();
 	}
-
+	BOOLEAN     Cancelled;
+	NdisMCancelTimer(&LinkTimer,&Cancelled);
 	NdisMDeregisterAdapterShutdownHandler( DriverHandle );
 	TermDmaAndInt();
 }

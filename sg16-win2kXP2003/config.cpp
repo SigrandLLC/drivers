@@ -58,6 +58,7 @@ AdapterDesc::ReadConfiguration( NDIS_HANDLE ConfigHandle )
 	if( Status == NDIS_STATUS_SUCCESS )
 	{
 		ModemCfg.rate=INT_DATA( Parm ) &~0x1F;
+		ModemCfg.rate=( ModemCfg.rate >> 3 ) & 0x3ff;
 	}
 
 	NDIS_STRING const	TerminalTypeStr=NDIS_STRING_CONST( "TerminalType" );
@@ -362,7 +363,7 @@ AdapterDesc::MiniportQueryInformation( NDIS_OID Oid, PVOID InformationBuffer,
 		break;
 
 	case OID_GEN_LINK_SPEED:
-		Data.U32=ModemCfg.rate * 10;
+		Data.U32=(ModemCfg.rate<<3) * 10;
 		break;
 
 	case OID_GEN_TRANSMIT_BUFFER_SPACE:

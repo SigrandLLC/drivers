@@ -30,3 +30,7 @@ NTHALAPI KIRQL	KeGetCurrentIrql( VOID );
 #include "hdlc.h"
 #include "utils.h"
 #include "sg16pci.h"
+
+VOID 
+LinkCheckFunc(PVOID sysspiff1, PVOID AdapterContext,
+                  PVOID sysspiff2, PVOID sysspiff3);

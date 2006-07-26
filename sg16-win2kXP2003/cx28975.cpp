@@ -105,6 +105,30 @@ AdapterDesc::DoModemCmd( BYTE Cmd, PCVOID Data, UINT Size,
 /* -----------------------------------------------------------------------------
  *
  ------------------------------------------------------------------------------- */
+
+VOID 
+LinkCheckFunc(PVOID sysspiff1, PVOID AdapterContext,
+                  PVOID sysspiff2, PVOID sysspiff3)
+{
+	Debug( 5, NULL, "Timer function" );
+	AdapterDesc *ad= (AdapterDesc *)AdapterContext;
+	BYTE const	AsmStatus=BYTE( ad->cmdp->Status_1 & MST1_AsmStatus );
+	if( ad->ModemState != ACTIVE && AsmStatus == _ASM_STAT_SUCCESS )
+	{
+		Debug( 5, NULL, "Link established" );
+		ad->ModemState=ACTIVE;
+	} else if( ad->ModemState == ACTIVE && AsmStatus != _ASM_STAT_SUCCESS )
+	{
+		Debug( 5, NULL, "Link lost" );
+		ad->ModemState=ACTIVATION;
+	}
+
+}
+
+/* -----------------------------------------------------------------------------
+ *
+ ------------------------------------------------------------------------------- */
+
 void
 AdapterDesc::cx28975_interrupt( void )
 {
@@ -115,19 +139,9 @@ AdapterDesc::cx28975_interrupt( void )
 		/* cmdp->intr_host = 0; */
 		if( cmdp->out_ack & MACK_UnsolInt )
 		{
-			if( cmdp->Status_8 & MST8_AsmTransition )
-			{
-				BYTE const	AsmStatus=BYTE( cmdp->Status_1 & MST1_AsmStatus );
-				if( ModemState != ACTIVE && AsmStatus == _ASM_STAT_SUCCESS )
-				{
-					/* !!! Add 10-second timeout for link settlement */
-					Debug( 5, this, "Link established" );
-					ModemState=ACTIVE;
-				} else if( ModemState == ACTIVE && AsmStatus != _ASM_STAT_SUCCESS )
-				{
-					Debug( 5, this, "Link lost" );
-					ModemState=ACTIVATION;
-				}
+			if( cmdp->Status_8 & MST8_AsmTransition ){
+				Debug( 5, this, "Timer sheduled" );
+				NdisMSetTimer(&LinkTimer,500);
 			}
 
 			cmdp->intr_host=0;		/* Remove interrupt message code */
@@ -303,7 +317,7 @@ AdapterDesc::start_cx28975( PCVOID firmw_img, UINT firmw_len )
 			min_rate=MIN_RATE;
 		}
 
-		ModemCfg.rate=( ModemCfg.rate >> 3 ) & 0x3ff;
+
 		if( max_rate )
 		{
 			tmp=WORD( (min_rate >> 3) & 0x3ff );

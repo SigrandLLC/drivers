@@ -64,6 +64,7 @@ public:
 	Hdlc_Cfg	HdlcCfg;					/* HDLC configuration */
 	StatDesc	Stat;						/* Statistics data */
 	SpinLock	SL;						/* Protection spin lock */
+	NDIS_MINIPORT_TIMER  LinkTimer;
 
 	/* Standard statistic counters */
 	ULONG64 volatile	XmitGood;
