@@ -43,8 +43,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /Gz /W4 /WX /Ox /Ot /Oa /Ow /Og /Oi /I "E:\NTDDK\inc\\" /I "E:\NTDDK\inc\ddk\\" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /Yu"common.h" /FD /c
-# SUBTRACT CPP /Os /X
+# ADD CPP /nologo /Gz /W4 /Ox /Ot /Oa /Ow /Og /Oi /I "E:\NTDDK\inc\\" /I "E:\NTDDK\inc\ddk\\" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /Yu"common.h" /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x419 /d "NDEBUG"

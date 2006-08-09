@@ -103,8 +103,20 @@ AdapterDesc::DoModemCmd( BYTE Cmd, PCVOID Data, UINT Size,
 }
 
 /* -----------------------------------------------------------------------------
- *
- ------------------------------------------------------------------------------- */
+ *  Link check function
+  ------------------------------------------------------------------------------- */
+
+ModemStates
+GetCurModemState(cx28975_cmdarea *cmdp)
+{
+	BYTE const	AsmStatus=BYTE( cmdp->Status_1 & MST1_AsmStatus );
+	if( AsmStatus == _ASM_STAT_SUCCESS )
+	{
+		Debug( 5, NULL, "Link established" );
+		return ACTIVE;
+	}
+	return ACTIVATION;
+}
 
 VOID 
 LinkCheckFunc(PVOID sysspiff1, PVOID AdapterContext,
@@ -112,17 +124,31 @@ LinkCheckFunc(PVOID sysspiff1, PVOID AdapterContext,
 {
 	Debug( 5, NULL, "Timer function" );
 	AdapterDesc *ad= (AdapterDesc *)AdapterContext;
-	BYTE const	AsmStatus=BYTE( ad->cmdp->Status_1 & MST1_AsmStatus );
-	if( ad->ModemState != ACTIVE && AsmStatus == _ASM_STAT_SUCCESS )
-	{
-		Debug( 5, NULL, "Link established" );
-		ad->ModemState=ACTIVE;
-	} else if( ad->ModemState == ACTIVE && AsmStatus != _ASM_STAT_SUCCESS )
-	{
-		Debug( 5, NULL, "Link lost" );
-		ad->ModemState=ACTIVATION;
-	}
+	ModemStates const	PrevState=ad->ModemState;
 
+	ad->ModemState=GetCurModemState(ad->cmdp);
+	if( ad->ModemState == PrevState )
+		return;
+	
+	if( ad->ModemState == ACTIVE )
+	{
+		ad->HLDC->ResetStatusBits( ALL );
+		ad->EnableReceiver();
+		ad->Stat.attempts++;
+		NdisGetCurrentSystemTime( &ad->Stat.last_time );
+		/* !!!Unlock (); */
+		if( !ad->ModemCfg.AlwaysConnected )
+		{
+			ad->Indicate( NDIS_STATUS_MEDIA_CONNECT );
+		}
+	}else if( PrevState == ACTIVE ){
+		ad->DisableReceiver();
+		/* !!!Unlock (); */
+		if( !ad->ModemCfg.AlwaysConnected )
+		{
+			ad->Indicate( NDIS_STATUS_MEDIA_DISCONNECT );
+		}
+	}
 }
 
 /* -----------------------------------------------------------------------------

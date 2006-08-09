@@ -445,42 +445,11 @@ AdapterDesc::MiniportHandleInterrupt( void )
 	Check();
 	Assert( NdisInterlockedIncrement(&IntDepth) == 1 );
 	Lock();
+
 	if( TestBits(LastIntEvents, EXT) )
 	{
 		Debug( 1, this, "Modem event" );
-
-		ModemStates const	PrevState=ModemState;
 		cx28975_interrupt();
-		if( ModemState != PrevState )
-		{
-			if( ModemState == ACTIVE )
-			{
-				HLDC->ResetStatusBits( ALL );
-				EnableReceiver();
-				Stat.attempts++;
-				NdisGetCurrentSystemTime( &Stat.last_time );
-
-				/* !!!Unlock (); */
-				if( !ModemCfg.AlwaysConnected )
-				{
-					Indicate( NDIS_STATUS_MEDIA_CONNECT );
-				}
-
-				/* !!!Lock (); */
-			} else if( PrevState == ACTIVE )
-			{
-				DisableReceiver();
-
-				/* !!!Unlock (); */
-				if( !ModemCfg.AlwaysConnected )
-				{
-					Indicate( NDIS_STATUS_MEDIA_DISCONNECT );
-				}
-
-				/* !!!Lock (); */
-			}
-		}
-
 		ResetBits( LastIntEvents, EXT );
 	}
 
@@ -699,7 +668,7 @@ MiniportInitialize( PNDIS_STATUS OpenErrorStatus, PUINT SelectedMediumIndex,
 					NDIS_HANDLE MPH, NDIS_HANDLE WrapperConfigurationContext )
 {
 #ifdef _DEBUG
-	DbgBreakPoint();
+//	DbgBreakPoint();
 #endif
 	UNUSED( OpenErrorStatus );
 	Debug( 0, NULL, "MiniportInitialize for %X: ENTER", MPH );
@@ -788,7 +757,7 @@ DriverEntry( PDRIVER_OBJECT drvObj, PUNICODE_STRING registryPath )
 {
 #ifdef _DEBUG
 	DbgPrint( "\n\n\n" );
-	DbgBreakPoint();
+//	DbgBreakPoint();
 #endif
 
 	ULONG	SysTime;
