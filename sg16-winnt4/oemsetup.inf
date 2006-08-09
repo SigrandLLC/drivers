@@ -1,0 +1,664 @@
+;******************************************************************************
+;
+; Granch SBNI16 DSL Modem Driver 1.0
+; for Windows NT 4.0 (NDIS4 driver)
+;
+; Copyright (c) Granch, Ltd. 2002-2003
+;
+;******************************************************************************
+
+[Identify]
+    read-syms Identification
+    set Status     = STATUS_SUCCESSFUL
+    set Identifier = $(OptionType)
+    set Media      = #("Source Media Descriptions", 1, 1)
+    Return $(Status) $(Identifier) $(Media)
+
+[Identification]
+    OptionType = NetAdapter
+
+[Source Media Descriptions]
+    1 = "Granch SBNI16 Setup Disk"
+
+; ----------------------------------------------------------------------
+
+[ReturnOptions]
+    set Status = STATUS_FAILED
+    set OptionList     = {}
+    set OptionTextList = {}
+    set LanguageList = ^(LanguagesSupported, 1)
+
+    ; check language
+    Ifcontains(i) $($0) in $(LanguageList)
+        ifstr(i) $($1) == ""
+            goto returnoptions
+        endif
+        set PlatformList = ^(PlatformsSupported, 1)
+
+        ; check platform
+        Ifcontains(i) $($1) in $(PlatformList)
+            goto returnoptions
+        else
+            set Status = STATUS_NOTSUPPORTED
+            goto finish_ReturnOptions
+        endif
+    else
+        set Status = STATUS_NOLANGUAGE
+        goto finish_ReturnOptions
+    endif
+
+returnoptions = +
+    set OptionList     = ^(Options, 1)
+    set OptionTextList = ^(OptionsText$($0), 1)
+    set Status         = STATUS_SUCCESSFUL
+
+finish_ReturnOptions = +
+    Return $(Status) $(OptionList) $(OptionTextList)
+
+; ----------------------------------------------------------------------
+
+[InstallOption]
+    set Option   = $($1)
+    set SrcDir   = $($2)
+    set AddCopy  = $($3)
+    set DoCopy   = $($4)
+    set DoConfig = $($5)
+    set LanguageList = ^(LanguagesSupported, 1)
+    Ifcontains(i) $($0) NOT-IN $(LanguageList)
+        Return STATUS_NOLANGUAGE
+    endif
+
+    read-syms GeneralConstants
+    read-syms FileConstants
+    read-syms FileConstants$(!STF_LANGUAGE)
+    read-syms Constants$(Option)$(!STF_LANGUAGE)
+    detect date
+    set-title  $(FunctionTitle)
+    set CommonStatus = STATUS_SUCCESSFUL
+
+    Ifstr(i)      $(!NTN_InstallMode) == deinstall
+        goto RemoveAdapter
+    else-Ifstr(i) $(!NTN_InstallMode) == Update
+        goto UpgradeSoftware
+    else-Ifstr(i) $(!NTN_InstallMode) == bind
+        goto BindingAdapter
+    else-Ifstr(i) $(!NTN_InstallMode) == configure
+        goto ConfigureAdapter
+    else
+        goto InstallAdapter
+    endif
+
+
+InstallAdapter = +
+    ; check NT version
+    set VerNT = ""
+    OpenRegKey $(!REG_H_LOCAL) "" "SOFTWARE\Microsoft\Windows Nt\CurrentVersion" $(!REG_KEY_READ) KeyNt
+    Ifstr(i) $(KeyNt) != $(KeyNull)
+        GetRegValue $(KeyNt) "CurrentVersion" VerNT
+        CloseRegKey $(KeyNt)
+    Endif
+    Ifstr *($(VerNT),4) != "4.0"
+        set Error = "Only is Windows NT 4.0 supported!"
+        goto Fatal
+    Endif
+
+    ; check if already installed
+    set OldVersionExisted = $(FALSE)
+    OpenRegKey $(!REG_H_LOCAL) "" $(ProductKeyName) $(MAXIMUM_ALLOWED) KeyProduct
+    Ifstr $(KeyProduct) != $(KeyNull)
+        CloseRegKey $(KeyProduct)
+        ifstr(i) $(!NTN_RegBase) == $(ProductKeyName)
+            Shell $(UtilityInf), VerExistedDlg, $(ProductSoftwareTitle),+
+                $(ProductVersion)
+            ifint $($ShellCode) != $(!SHELL_CODE_OK)
+                goto ShellCodeError
+            endif
+            goto end
+        else
+            Shell $(UtilityInf), CardExistedDlg
+            ifint $($ShellCode) != $(!SHELL_CODE_OK)
+                goto ShellCodeError
+            endif
+            ifstr(i) $($R1) != "OK"
+                set CommonStatus = STATUS_USERCANCEL
+                goto End
+            endif
+            set OldVersionExisted = $(TRUE)
+        endif
+    endif
+
+; it may be only option - SBNI16
+    set VendorID = 85
+    set DeviceID = 157
+    Shell $(UtilityInf), GetPCIInformation, $(VendorID) $(DeviceID)
+    ifint $($ShellCode) != $(!SHELL_CODE_OK)
+        goto ShellCodeError
+    endif
+    ifstr(i) $($R0) == {}
+        set Error = "Cannot find any SBNI16 PCI card."
+        set CommonStatus = USER_CANCEL
+        goto Fatal
+    endif
+    set AdapterList = $($R0)
+
+    ifint $(OldVersionExisted) == $(FALSE)
+        ifstr(i) $(!NTN_InstallMode) == "Install"
+            Ifstr(i) $(DoCopy) == "YES"
+                Shell $(UtilityInf), DoAskSource, $(!STF_CWDDIR), $(SrcDir) YES
+                Ifint $($ShellCode) != $(!SHELL_CODE_OK)
+                    goto ShellCodeError
+                Else-Ifstr(i) $($R0) == STATUS_FAILED
+                    Shell $(UtilityInf) RegistryErrorString "ASK_SOURCE_FAIL"
+                    ifint $($ShellCode) != $(!SHELL_CODE_OK)
+                        goto ShellCodeError
+                    endif
+                    set Error = $($R0)
+                    goto Fatal
+                Else-Ifstr(i) $($R0) == STATUS_USERCANCEL
+                    goto End
+                Endif
+                Set SrcDir = $($R1)
+            Endif
+
+            StartWait
+            Install "Install-Option"
+            EndWait
+
+            ifstr(i) $(STF_INSTALL_OUTCOME) != STF_SUCCESS
+                Shell $(UtilityInf) RegistryErrorString "UNABLE_COPY_FILE"
+                ifint $($ShellCode) != $(!SHELL_CODE_OK)
+                    goto ShellCodeError
+                endif
+                set Error = $($R0)
+                goto Fatal
+            endif
+        endif
+
+        Shell $(UtilityInf), AddSoftwareComponent, $(Manufacturer), +
+            $(ProductSoftwareName), +
+            $(ProductSoftwareName), +
+            $(ProductSoftwareTitle), $(STF_CONTEXTINFNAME), +
+            $(ProductSoftwareImagePath), "kernel", "NDIS", {}, "",+
+            $(NetEventDLL)
+        ifint $($ShellCode) != $(!SHELL_CODE_OK)
+            goto ShellCodeError
+        endif
+        set RegistryErrorIndex = $($R0)
+        set KeyProduct      = $($R1)
+        Set SoftNetRulesKey = $($R2)
+        CloseRegKey $($R3)
+        CloseRegKey $($R4)
+        CloseRegKey $($R5)
+        Ifstr(i) $(RegistryErrorIndex) != NO_ERROR
+            CloseRegKey $(KeyProduct)
+            CloseRegKey $(SoftNetRulesKey)
+            goto FatalRegistry
+        endif
+
+        set NewValueList = {{SoftwareType,$(NoTitle),$(!REG_VT_SZ),$(SoftwareType)},+
+                            {MajorVersion,$(NoTitle),$(!REG_VT_DWORD),$(ProductMajorVersion)},+
+                            {MinorVersion,$(NoTitle),$(!REG_VT_DWORD),$(ProductMinorVersion)},+
+                            {Title,$(NoTitle),$(!REG_VT_SZ),$(ProductSoftwareTitle)},+
+                            {Description,$(NoTitle),$(!REG_VT_SZ),$(ProductSoftwareDescription)},+
+                            {ServiceName,$(NoTitle),$(!REG_VT_SZ),$(ProductSoftwareName)},+
+                            {InstallDate,$(NoTitle),$(!REG_VT_DWORD),*($(Now),1)}}
+
+        Shell  $(UtilityInf), AddValueList, $(KeyProduct), $(NewValueList)
+        ifint $($ShellCode) != $(!SHELL_CODE_OK)
+            goto ShellCodeError
+        endif
+        set RegistryErrorIndex = $($R0)
+        Ifstr(i) $(RegistryErrorIndex) != NO_ERROR
+            CloseRegKey $(KeyProduct)
+            CloseRegKey $(SoftNetRulesKey)
+            goto FatalRegistry
+        endif
+
+        set NewValueList = {{type,$(NoTitle),$(!REG_VT_SZ),$(NetRuleSoftwareType)},+
+                            {use,$(NoTitle),$(!REG_VT_SZ),$(NetRuleSoftwareUse)}, +
+                            {bindform,$(NoTitle),$(!REG_VT_SZ),$(NetRuleSoftwareBindForm)}, +
+                            {class,$(NoTitle),$(!REG_VT_MULTI_SZ),$(NetRuleSoftwareClass)}, +
+                            {bindable,$(NoTitle),$(!REG_VT_MULTI_SZ),$(NetRuleSoftwareBindable)}, +
+                            {InfOption,$(NoTitle),$(!REG_VT_SZ),$(Option)}}
+        Shell  $(UtilityInf), AddValueList, $(SoftNetRulesKey), $(NewValueList)
+        ifint $($ShellCode) != $(!SHELL_CODE_OK)
+            goto ShellCodeError
+        endif
+        set RegistryErrorIndex = $($R0)
+        CloseRegKey $(KeyProduct)
+        CloseRegKey $(SoftNetRulesKey)
+        Ifstr(i) $(RegistryErrorIndex) != NO_ERROR
+            goto FatalRegistry
+        endif
+    endif
+
+    LoadLibrary "Granch SBNI16 Setup Disk" $(!STF_WINDOWSSYSPATH)\sbni16c.dll LibHandle
+
+    ForListDo $(AdapterList)
+        set BusInterfaceType = 5
+        set BusNumber  = *($($),1)
+        set SlotNumber = *($($),2)
+        set FuncNumber = *($($),3)
+        Shell $(UtilityInf), IsNetCardAlreadyInstalled, $(BusNumber), +
+            $(SlotNumber), $(ProductHardware$(Option)Description), $(ProductHardwareName)
+        ifint $($ShellCode) != $(!SHELL_CODE_OK)
+            goto ShellCodeError
+        endif
+        ifstr $($R0) != "NO_ERROR"
+            set Error = $($R0)
+            goto fatal
+        endif
+        ifstr(i) $($R1) != "YES"
+            read-syms SBNIDefaultParameters
+
+            Shell $(UtilityInf), AddHardwareComponent, $(ProductHardwareName),$(STF_CONTEXTINFNAME),$(ProductKeyName)
+            ifint $($ShellCode) != $(!SHELL_CODE_OK)
+                goto ShellCodeError
+            endif
+            set RegistryErrorIndex = $($R0)
+            Ifstr(i) $(RegistryErrorIndex) != NO_ERROR
+                CloseRegKey $($R1)
+                CloseRegKey $($R2)
+                CloseRegKey $($R3)
+                goto FatalRegistry
+            endif
+
+            set KeyParameters = $($R3)
+            set KeyAdapterRules = $($R2)
+            set AdapterNumber = $($R4)
+            set NewValueList = {{Manufacturer,$(NoTitle),$(!REG_VT_SZ),$(Manufacturer)},+
+                                {Title,$(NoTitle),$(!REG_VT_SZ),"["$($R4)"] "$(ProductHardware$(Option)Title)},+
+                                {Description,$(NoTitle),$(!REG_VT_SZ),$(ProductHardware$(Option)Description)},+
+                                {ProductName,$(NoTitle),$(!REG_VT_SZ),$(ProductHardwareName)},+
+                                {ServiceName,$(NoTitle),$(!REG_VT_SZ),$($R5)},+
+                                {InstallDate,$(NoTitle),$(!REG_VT_DWORD),*($(Now),1)}}
+            Shell  $(UtilityInf), AddValueList, $($R1), $(NewValueList)
+            ifint $($ShellCode) != $(!SHELL_CODE_OK)
+                goto ShellCodeError
+            endif
+            CloseRegKey $($R1)
+
+            set TempProdName = """"$(ProductHardwareName)$(AdapterNumber)""""
+            set TempBindForm = $(TempProdName)$(NetRuleHardwareBindForm)
+            set NewValueList = {{type,$(NoTitle),$(!REG_VT_SZ),$(NetRuleHardwareType)},+
+                                {bindform,$(NoTitle),$(!REG_VT_SZ),$(TempBindForm)}, +
+                                {class,$(NoTitle),$(!REG_VT_MULTI_SZ),$(NetRuleHardwareClass)}, +
+                                {InfOption,$(NoTitle),$(!REG_VT_SZ),$(Option)}}
+
+            Shell  $(UtilityInf), AddValueList, $(KeyAdapterRules), $(NewValueList)
+            ifint $($ShellCode) != $(!SHELL_CODE_OK)
+                goto ShellCodeError
+            endif
+            set RegistryErrorIndex = $($R0)
+            Ifstr(i) $(RegistryErrorIndex) != NO_ERROR
+                CloseRegKey $(KeyParameters)
+                CloseRegKey $(KeyAdapterRules)
+                goto FatalRegistry
+            endif
+            CloseRegKey $(KeyAdapterRules)
+
+            LibraryProcedure Result $(LibHandle) _SBNI16_Config@12 +
+                $(BusNumber) $(SlotNumber) $(IsItMaster) $(LineRate) +
+                $(LineCode) $(NetworkAddress) +
+                $(CRC16) $(FillFlag) $(RBurst) $(WBurst)
+
+            ifstr(i) $(Result) == OK
+                LibraryProcedure IsItMaster  $(LibHandle) _GetIsItMaster@12
+                LibraryProcedure LineRate  $(LibHandle) _GetLineRate@12
+                LibraryProcedure LineCode  $(LibHandle) _GetLineCode@12
+                LibraryProcedure NetworkAddress $(LibHandle) _GetNetworkAddress@12
+                LibraryProcedure CRC16  $(LibHandle) _GetCRC@12
+                LibraryProcedure FillFlag  $(LibHandle) _GetFill@12
+                LibraryProcedure RBurst  $(LibHandle) _GetRBurst@12
+                LibraryProcedure WBurst  $(LibHandle) _GetWBurst@12
+            endif
+
+            set NewValueList = {+
+                {BusType,$(NoTitle),$(!REG_VT_DWORD),$(BusInterfaceType)},+
+                {BusNumber,$(NoTitle),$(!REG_VT_DWORD),$(BusNumber)},+
+                {SlotNumber,$(NoTitle),$(!REG_VT_DWORD),$(SlotNumber)},+
+                {FunctionNumber,$(NoTitle),$(!REG_VT_DWORD),$(FuncNumber)},+
+                {MediaType,$(NoTitle),$(!REG_VT_DWORD),1},+
+                {AdapterCFID,$(NoTitle),$(!REG_VT_DWORD),10289237},+
+                {IsItMaster,$(NoTitle),$(!REG_VT_DWORD),$(IsItMaster)},+
+                {LineRate,$(NoTitle),$(!REG_VT_DWORD),$(LineRate)},+
+                {LineCode,$(NoTitle),$(!REG_VT_DWORD),$(LineCode)},+
+                {NetworkAddress,$(NoTitle),$(!REG_VT_SZ),$(NetworkAddress)},+
+                {CRC16,$(NoTitle),$(!REG_VT_DWORD),$(CRC16)},+
+                {FillByte,$(NoTitle),$(!REG_VT_DWORD),$(FillFlag)},+
+                {ReadBurst,$(NoTitle),$(!REG_VT_DWORD),$(RBurst)},+
+                {WriteBurst,$(NoTitle),$(!REG_VT_DWORD),$(WBurst)}}
+            Shell  $(UtilityInf), AddValueList, $(KeyParameters), $(NewValueList)
+            CloseRegKey $(KeyParameters)
+            ifint $($ShellCode) != $(!SHELL_CODE_OK)
+                goto ShellCodeError
+            endif
+            set RegistryErrorIndex = $($R0)
+            Ifstr(i) $(RegistryErrorIndex) != NO_ERROR
+                goto FatalRegistry
+            endif
+        endif
+    EndForListDo
+    FreeLibrary $(LibHandle)
+    goto End
+
+
+BindingAdapter =+
+    set Error = "Binding: Sorry, not yet implemented."
+    goto Fatal
+
+
+RemoveAdapter = +
+    Ifstr(i) $(ProductKeyName) == $(!NTN_RegBase)
+        Shell $(UtilityInf), RemoveSoftwareComponent, $(Manufacturer), +
+            $(ProductSoftwareName)
+        ifint $($ShellCode) != $(!SHELL_CODE_OK)
+            goto ShellCodeError
+        endif
+        set RegistryErrorIndex = $($R0)
+        Ifstr(i) $(RegistryErrorIndex) != NO_ERROR
+            goto FatalRegistry
+        endif
+    else
+        Shell $(UtilityInf), RemoveHardwareComponent, $(Manufacturer), +
+            $(ProductSoftwareName), $(!NTN_RegBase)
+        ifint $($ShellCode) != $(!SHELL_CODE_OK)
+            goto ShellCodeError
+        endif
+        set RegistryErrorIndex = $($R0)
+        Ifstr(i) $(RegistryErrorIndex) != NO_ERROR
+            goto FatalRegistry
+        endif
+    endif
+    goto End
+
+
+UpgradeSoftware = +
+    OpenRegKey $(!REG_H_LOCAL) "" $(ProductKeyName) $(MAXIMUM_ALLOWED) KeyProduct
+    Ifstr $(KeyProduct) != $(KeyNull)
+        install "Install-Update"
+        ifstr(i) $(STF_INSTALL_OUTCOME) != STF_SUCCESS
+            goto Fatal
+        endif
+        SetRegValue $(KeyProduct) {MajorVersion,$(NoTitle),$(!REG_VT_SZ),$(ProductMajorVersion)}
+        SetRegValue $(KeyProduct) {MinorVersion,$(NoTitle),$(!REG_VT_SZ),$(ProductMinorVersion)}
+        CloseRegKey $(KeyProduct)
+    else
+        set RegistryErrorIndex = $($R0)
+        Ifstr(i) $(RegistryErrorIndex) != NO_ERROR
+            goto FatalRegistry
+        endif
+    endif
+    goto End
+
+ConfigureAdapter =+
+    set CommonStatus = STATUS_REBOOT
+    Ifstr $(KeyProduct) == $(KeyNull)
+        OpenRegKey $(!REG_H_LOCAL) "" $(!NTN_RegBase) $(MAXIMUM_ALLOWED) KeyProduct
+        Ifstr $(KeyProduct) == $(KeyNull)
+            set RegistryErrorIndex = CANNOT_FIND_COMPONENT_SERVICE
+            goto FatalRegistry
+        Endif
+    Endif
+    Shell $(UtilityInf) FindService, $(KeyProduct)
+    Ifint $($ShellCode) != $(!SHELL_CODE_OK)
+        goto ShellCodeError
+    Endif
+    set RegistryErrorIndex = $($R0)
+    Ifstr(i) $(RegistryErrorIndex) != NO_ERROR
+        goto FatalRegistry
+    endif
+    set KeyParameters = $($R2)
+    CloseRegKey $($R1)
+    Ifstr $(KeyParameters) == $(KeyNull)
+        set RegistryErrorIndex = CANNOT_FIND_COMPONENT_SERVICE
+        goto FatalRegistry
+    endif
+    set OldVersionExisted = $(TRUE)
+    set ValueName = ""
+    set ValueData = ""
+    set ValueStr  = ""
+    set ValueList = {}
+
+    read-syms SBNIDefaultParameters
+
+    EnumRegValue $(KeyParameters) ValueList
+    ForListDo $(ValueList)
+        set ValueItem = $($)
+        set ValueName = *($(ValueItem),1)
+        set ValueData = *($(ValueItem),4)
+        Ifstr(i) $(ValueName) == "BusNumber"
+            set BusNumber = $(ValueData)
+        else-ifstr(i) $(ValueName) == "SlotNumber"
+            set SlotNumber = $(ValueData)
+        else-ifstr(i) $(ValueName) == "NetworkAddress"
+            set NetworkAddress = $(ValueData)
+        else-ifstr(i) $(ValueName) == "IsItMaster"
+            set IsItMaster = $(ValueData)
+        else-ifstr(i) $(ValueName) == "LineRate"
+            set LineRate = $(ValueData)
+        else-ifstr(i) $(ValueName) == "LineCode"
+            set LineCode = $(ValueData)
+        else-ifstr(i) $(ValueName) == "NetworkAddress"
+            set NetworkAddress = $(ValueData)
+        else-ifstr(i) $(ValueName) == "CRC16"
+            set CRC16 = $(ValueData)
+        else-ifstr(i) $(ValueName) == "FillByte"
+            set FillFlag = $(ValueData)
+        else-ifstr(i) $(ValueName) == "ReadBurst"
+            set RBurst = $(ValueData)
+        else-ifstr(i) $(ValueName) == "WriteBurst"
+            set WBurst = $(ValueData)
+        endif
+    EndForListDo
+
+    LoadLibrary "Granch SBNI16 Setup Disk" $(!STF_WINDOWSSYSPATH)\sbni16c.dll LibHandle
+    LibraryProcedure Result $(LibHandle) _SBNI16_Config@12 +
+        $(BusNumber) $(SlotNumber) $(IsItMaster) $(LineRate) $(LineCode) +
+        $(NetworkAddress) $(CRC16) $(FillFlag) $(RBurst) $(WBurst)
+
+    ifstr(i) $(Result) == OK
+        LibraryProcedure IsItMaster  $(LibHandle) _GetIsItMaster@12
+        LibraryProcedure LineRate  $(LibHandle) _GetLineRate@12
+        LibraryProcedure LineCode  $(LibHandle) _GetLineCode@12
+        LibraryProcedure NetworkAddress $(LibHandle) _GetNetworkAddress@12
+        LibraryProcedure CRC16  $(LibHandle) _GetCRC@12
+        LibraryProcedure FillFlag  $(LibHandle) _GetFill@12
+        LibraryProcedure RBurst  $(LibHandle) _GetRBurst@12
+        LibraryProcedure WBurst  $(LibHandle) _GetWBurst@12
+    else
+        set CommonStatus = STATUS_USERCANCEL
+        goto End
+    endif
+    FreeLibrary $(LibHandle)
+
+    set NewValueList = {+
+        {IsItMaster,$(NoTitle),$(!REG_VT_DWORD),$(IsItMaster)},+
+        {LineRate,$(NoTitle),$(!REG_VT_DWORD),$(LineRate)},+
+        {LineCode,$(NoTitle),$(!REG_VT_DWORD),$(LineCode)},+
+        {NetworkAddress,$(NoTitle),$(!REG_VT_SZ),$(NetworkAddress)},+
+        {CRC16,$(NoTitle),$(!REG_VT_DWORD),$(CRC16)},+
+        {FillByte,$(NoTitle),$(!REG_VT_DWORD),$(FillFlag)},+
+        {ReadBurst,$(NoTitle),$(!REG_VT_DWORD),$(RBurst)},+
+        {WriteBurst,$(NoTitle),$(!REG_VT_DWORD),$(WBurst)}}
+    Shell  $(UtilityInf), AddValueList, $(KeyParameters), $(NewValueList)
+    CloseRegKey $(KeyParameters)
+    ifint $($ShellCode) != $(!SHELL_CODE_OK)
+        goto ShellCodeError
+    endif
+    set RegistryErrorIndex = $($R0)
+    Ifstr(i) $(RegistryErrorIndex) != NO_ERROR
+        goto FatalRegistry
+    endif
+    goto End
+
+
+FatalRegistry = +
+    Shell $(UtilityInf) RegistryErrorString $(RegistryErrorIndex)
+    ifint $($ShellCode) != $(!SHELL_CODE_OK)
+        goto ShellCodeError
+    endif
+    set Error = $($R0)
+    goto Fatal
+
+Fatal = +
+    ifstr(i) $(Error) == ""
+        Shell $(UtilityInf) RegistryErrorString "SETUP_FAIL"
+        ifint $($ShellCode) != $(!SHELL_CODE_OK)
+            goto ShellCodeError
+        endif
+        set Error = $($R0)
+    endif
+    Shell $(subroutineinf) SetupMessage, $(!STF_LANGUAGE), "FATAL", $(Error)
+    ifint $($ShellCode) != $(!SHELL_CODE_OK)
+        goto ShellCodeError
+    endif
+    goto SetFailed
+
+ShellCodeError = +
+    goto SetFailed
+SetFailed = +
+    set CommonStatus = STATUS_FAILED
+    goto End
+End = +
+    goto Term
+Term = +
+    Return $(CommonStatus)
+
+
+; ----------------------------------------------------------------------
+
+[Install-Option]
+    set STF_VITAL = ""
+    set STF_OVERWRITE = "ALWAYS"
+    ifstr(i) $(AddCopy) == "YES"
+        AddSectionFilesToCopyList Files-Driver $(SrcDir) $(!STF_WINDOWSSYSPATH)\drivers
+        AddSectionFilesToCopyList Files-CfgDLL $(SrcDir) $(!STF_WINDOWSSYSPATH)
+    endif
+    ifstr(i) $(DoCopy) == "YES"
+        set !STF_NCPA_FLUSH_COPYLIST = TRUE
+        CopyFilesInCopyList
+    endif
+    exit
+
+[Install-Update]
+    set STF_VITAL     = ""
+    set STF_OVERWRITE = "VERIFYSOURCEOLDER"
+    AddSectionFilesToCopyList Files-Driver $(SrcDir) $(!STF_WINDOWSSYSPATH)\drivers
+    AddSectionFilesToCopyList Files-CfgDLL $(SrcDir) $(!STF_WINDOWSSYSPATH)
+    set !STF_NCPA_FLUSH_COPYLIST = TRUE
+    CopyFilesInCopyList
+    exit
+
+[Files-Driver]
+1, sbni16.sys
+1, cxfw.bin
+
+[Files-CfgDLL]
+1, sbni16c.dll
+1, sb16stat.exe
+
+; ----------------------------------------------------------------------
+
+[LanguagesSupported]
+    ENG
+
+[PlatformsSupported]
+    PCI
+
+[Options]
+    SBNI16
+
+[OptionsTextENG]
+    SBNI16 = "Granch SBNI16 SHDSL Modem"
+
+[date]
+    Now = {} ? $(!LIBHANDLE) GetSystemDate
+
+; ----------------------------------------------------------------------
+
+[FileConstants]
+    UtilityInf      = "UTILITY.INF"
+    ParamInf        = "NCPARAM.INF"
+    subroutineinf   = "SUBROUTN.INF"
+    Exit_Code       = 0
+    NetEventDLL     = "%SystemRoot%\System32\netevent.dll"
+    IoLogMsgDLL     = "%SystemRoot%\System32\IoLogMsg.dll"
+    ProductMajorVersion     = "4"
+    ProductMinorVersion     = "1"
+    ProductVersion  = $(ProductMajorVersion)"."$(ProductMinorVersion)
+    SoftwareType            = "driver"
+    Manufacturer            = "Granch"
+    ServiceName             = "SBNI16"
+    ProductSoftwareName     = "SBNI16"
+    ProductSoftwareImagePath = "\SystemRoot\System32\drivers\sbni16.sys"
+
+    NetRuleSoftwareType     = "SBNI16Sys ndisDriver SBNI16Driver"
+    NetRuleSoftwareUse      = $(SoftwareType)
+    NetRuleSoftwareBindForm = """SBNI16Sys"" yes no container"
+    NetRuleSoftwareClass    = {"SBNI16Driver basic"}
+    NetRuleSoftwareBindable = {"SBNI16Driver SBNI16Adapter non exclusive 100"}
+
+    ProductHardwareName     = "SBNI16"
+    NetRuleHardwareType     = "SBNI16 SBNI16Adapter"
+    NetRuleHardwareBindForm = " yes yes container"
+    NetRuleHardwareClass    = {"SBNI16Adapter basic"}
+
+    ProductKeyName  = $(!NTN_SoftwareBase)"\"$(Manufacturer)"\"$(ProductSoftwareName)"\CurrentVersion"
+    ParamKeyName    = $(!NTN_ServiceBase)"\"$(ProductHardwareName)"\Parameters"
+
+
+[GeneralConstants]
+    from      = ""
+    to        = ""
+    ExitCodeOk     = 0
+    ExitCodeCancel = 1
+    ExitCodeFatal  = 2
+    KeyNull         = ""
+    MAXIMUM_ALLOWED   = 33554432
+    RegistryErrorIndex = NO_ERROR
+    KeyProduct      = ""
+    KeyParameters   = ""
+    TRUE            = 1
+    FALSE           = 0
+    NoTitle         = 0
+    ExitState   = "Active"
+    DriverPath      = $(!STF_NTPATH)\drivers
+
+
+[FileConstantsENG]
+    ProCaption   = "Windows NT Setup"
+    ProCancel    = "Cancel"
+    ProCancelMsg = "Windows NT Networking is not correctly installed.  "+
+                   "Are you sure you want to cancel copying files?"
+    ProCancelCap = "Network Setup Message"
+    ProText1     = "Copying:"
+    ProText2     = "To:"
+    ShellCodeErrorText      = "Shell Code Error."
+
+[ConstantsSBNI16ENG]
+    FunctionTitle = "Granch SBNI16/PCI Network Card Setup"
+    ProductHardwareSBNI16Description = "Granch SBNI16/PCI Adapter"
+    ProductSoftwareTitle = "Granch SBNI16 Adapter Driver"
+    ProductSoftwareDescription  = "Granch SBNI16 Adapter Driver"
+    ProductHardwareSBNI16Title = "Granch SBNI16/PCI Adapter"
+    ShellCodeErrorTitle = "Error: "$(FunctionTitle)
+
+[SBNIDefaultParameters]
+    NetworkAddress = 00FF01590000
+    IsItMaster = 0
+    LineRate = 256
+    LineCode = 1
+    CRC16 = 0
+    FillFlag = 0
+    RBurst = 1
+    WBurst = 1
+
+
+[DialogConstantsENG]
+Help        = "&Help"
+Exit        = "Cancel"
+OK          = "OK"
+HelpContext = ""
+Continue    = "Continue"
+Cancel      = "Cancel"

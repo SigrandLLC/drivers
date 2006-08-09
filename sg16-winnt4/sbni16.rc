@@ -1,0 +1,23 @@
+#include <windows.h>
+#include <ntverp.h>
+
+#define	VER_FILETYPE	VFT_DRV
+#define	VER_FILESUBTYPE	VFT2_DRV_NETWORK
+
+#define VER_FILEDESCRIPTION_STR     "NDIS 4.0 miniport driver"
+#define VER_INTERNALNAME_STR        "SBNI16.SYS"
+#define VER_ORIGINALFILENAME_STR    "SBNI16.SYS"
+#define VER_LEGALCOPYRIGHT_YEARS    "2002-2003"
+
+#define VER_LEGALCOPYRIGHT_STR "(C) Granch, Ltd, 2002-2003."
+
+#define VER_COMPANYNAME_STR "Granch, Ltd."
+#define VER_PRODUCTNAME_STR "Granch SBNI16 SHDSL Modem Driver"
+
+#define VER_PRODUCTVERSION 1,00,00,001
+#define VER_FILEVERSION VER_PRODUCTVERSION
+#define VER_PRODUCTVERSION_STR "1.00"
+#define VER_FILEVERSION_STR VER_PRODUCTVERSION_STR
+
+#include "common.ver"
+

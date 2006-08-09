@@ -1,0 +1,24 @@
+TARGETNAME=sbni16
+#TARGETPATH=$(BASEDIR)\lib
+TARGETPATH=obj
+TARGETTYPE=DRIVER
+
+TARGETLIBS=$(BASEDIR)\lib\*\$(DDKBUILDENV)\ndis.lib
+
+
+#TARGETLIBS=E:\NTDDK\libfre\i386\ndis.lib
+
+C_DEFINES=$(C_DEFINES) -DNDIS_MINIPORT_DRIVER -DSBNI16 -DNDIS40_MINIPORT
+
+INCLUDES=..\inc;..\..\inc
+
+SOURCES=sbni16.c \
+        handler.c \
+        routines.c \
+        queries.c \
+        init.c \
+        sbni16.rc
+
+RELATIVE_DEPTH=..\..
+
+MSC_WARNING_LEVEL=/W3 /WX
