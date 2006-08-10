@@ -6,7 +6,7 @@
 bool
 AdapterDesc::WaitForModemReply( void )
 {
-	Assert( KeGetCurrentIrql() == PASSIVE_LEVEL );
+	Assert( KeGetCurrentIrql() <= DISPATCH_LEVEL ); //== PASSIVE_LEVEL );
 
 	bool	Success=false;
 	do
@@ -95,7 +95,8 @@ AdapterDesc::DoModemCmd( BYTE Cmd, PCVOID Data, UINT Size,
 	bool	Res=true;
 	if( !ComplRtn )
 	{
-		Assert( KeGetCurrentIrql() == PASSIVE_LEVEL );
+		Assert( KeGetCurrentIrql() <= DISPATCH_LEVEL );//== PASSIVE_LEVEL );
+		DbgPrint("Kurrent irq level= %d\n",KeGetCurrentIrql());
 		Res=WaitForModemReply();
 	}
 
@@ -351,7 +352,8 @@ AdapterDesc::start_cx28975( PCVOID firmw_img, UINT firmw_len )
 			tmp=WORD( (max_rate >> 3) & 0x3ff );
 			ModemCfg.rate=( ModemCfg.rate > tmp ) ? tmp : ModemCfg.rate;
 		} else
-		ModemCfg.rate=192 >> 3;
+			ModemCfg.rate=192 >> 3;
+
 		Debug( 7, NULL, "SG16: start, Rate=%d", ModemCfg.rate );
 
 		BYTE	parm[12];

@@ -363,7 +363,27 @@ AdapterDesc::MiniportQueryInformation( NDIS_OID Oid, PVOID InformationBuffer,
 		break;
 
 	case OID_GEN_LINK_SPEED:
-		Data.U32=(ModemCfg.rate<<3) * 10;
+		if( ModemCfg.remcfg && !ModemCfg.master ){
+			unsigned long t=_DSL_DATA_RATE;
+			
+//			Break();
+
+			if( DoModemCmd(_DSL_READ_CONTROL, &t, 1) )
+            {
+				t=0;
+                t=*((unsigned char*)(cmdp->out_data+1)) & 0x3;
+                t=(t<<8)+*((unsigned char*)(cmdp->out_data));
+                t--;
+				Data.U32=(t<<3) * 10;
+				DbgPrint( "Speed from chip=%d, gived to OS=%d\n",t,Data.U32 );
+				DbgPrint( "Res from chip: %08x,%08x\n",(char)cmdp->out_data,(char)cmdp->out_data+1);
+            }
+			else
+				Data.U32=0;
+	
+		}
+		else
+			Data.U32=(ModemCfg.rate<<3) * 10;
 		break;
 
 	case OID_GEN_TRANSMIT_BUFFER_SPACE:
