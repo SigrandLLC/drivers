@@ -96,7 +96,7 @@ AdapterDesc::DoModemCmd( BYTE Cmd, PCVOID Data, UINT Size,
 	if( !ComplRtn )
 	{
 		Assert( KeGetCurrentIrql() <= DISPATCH_LEVEL );//== PASSIVE_LEVEL );
-		DbgPrint("Kurrent irq level= %d\n",KeGetCurrentIrql());
+		Debug( 7, NULL,"Kurrent irq level= %d\n",KeGetCurrentIrql());
 		Res=WaitForModemReply();
 	}
 

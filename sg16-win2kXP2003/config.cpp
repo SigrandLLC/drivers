@@ -365,9 +365,6 @@ AdapterDesc::MiniportQueryInformation( NDIS_OID Oid, PVOID InformationBuffer,
 	case OID_GEN_LINK_SPEED:
 		if( ModemCfg.remcfg && !ModemCfg.master ){
 			unsigned long t=_DSL_DATA_RATE;
-			
-//			Break();
-
 			if( DoModemCmd(_DSL_READ_CONTROL, &t, 1) )
             {
 				t=0;
@@ -375,8 +372,8 @@ AdapterDesc::MiniportQueryInformation( NDIS_OID Oid, PVOID InformationBuffer,
                 t=(t<<8)+*((unsigned char*)(cmdp->out_data));
                 t--;
 				Data.U32=(t<<3) * 10;
-				DbgPrint( "Speed from chip=%d, gived to OS=%d\n",t,Data.U32 );
-				DbgPrint( "Res from chip: %08x,%08x\n",(char)cmdp->out_data,(char)cmdp->out_data+1);
+				Debug( 7, this, "Speed from chip=%d, gived to OS=%d\n",t,Data.U32 );
+				Debug( 7, this, "Res from chip: %08x,%08x\n",(char)cmdp->out_data,(char)cmdp->out_data+1);
             }
 			else
 				Data.U32=0;
