@@ -549,9 +549,16 @@ void
 AdapterDesc::ReadLinkStatus( DWORD_PTR Stage )
 {
 	Debug( 7, this, "ReadLinkStatus: stage %u", Stage );
-
-	if( !Stage ){
+	bool	Success=false;
+	Success=((cmdp->out_ack & MACK_Status) == _ACK_PASS);
+	if( Stage > 10 ){
+		cmdp->out_ack=0;
+		return;
+	}
+	if( !Stage || ( Stage && !Success ) ){
 		Stage++;
+		if( Stage )
+			cmdp->out_ack=0;
 		unsigned long t=_DSL_DATA_RATE;
 		DoModemCmd(_DSL_READ_CONTROL, &t, 1, &AdapterDesc::ReadLinkStatus, Stage );
 		return;
