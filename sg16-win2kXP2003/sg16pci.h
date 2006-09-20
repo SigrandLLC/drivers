@@ -137,6 +137,7 @@ public:
 	void	CancelRxPackets( void );
 	NDIS_STATUS ReadConfiguration( NDIS_HANDLE ConfigHandle );
 	NDIS_STATUS CardStart( void );
+	void	ReadLinkStatus( DWORD_PTR Stage );
 	void	ReadModemStat( DWORD_PTR Stage );
 	void	ReadModemStatComplete( bool Success=true );
 	void	ResetModemStat( DWORD_PTR Stage );

@@ -100,13 +100,15 @@ AdapterDesc::ReadConfiguration( NDIS_HANDLE ConfigHandle )
 			ModemCfg.mod=Modulations( INT_DATA(Parm) - 1 );
 		} else
 		{
-			if( ModemCfg.rate < 128 )
+			if( ModemCfg.remcfg ){
+				ModemCfg.mod=Mod_TCPAM32;
+			}else if( ModemCfg.rate < (128>>3) )
 			{
 				ModemCfg.mod=Mod_TCPAM4;
-			} else if( ModemCfg.rate < 1152 )
+			} else if( ModemCfg.rate < (1152>>3) )
 			{
 				ModemCfg.mod=Mod_TCPAM8;
-			} else if( ModemCfg.rate < 2560 )
+			} else if( ModemCfg.rate < (2560>>3) )
 			{
 				ModemCfg.mod=Mod_TCPAM16;
 			} else
@@ -115,6 +117,7 @@ AdapterDesc::ReadConfiguration( NDIS_HANDLE ConfigHandle )
 			}
 		}
 	}
+	Debug( 5, this, "Rate=%d(%d), Coding set to %d",ModemCfg.rate<<3,ModemCfg.rate,ModemCfg.mod);
 
 	NDIS_STRING const	CrcStr=NDIS_STRING_CONST( "CRC" );
 	READ_IPARM( &CrcStr );
@@ -363,24 +366,7 @@ AdapterDesc::MiniportQueryInformation( NDIS_OID Oid, PVOID InformationBuffer,
 		break;
 
 	case OID_GEN_LINK_SPEED:
-		if( ModemCfg.remcfg && !ModemCfg.master ){
-			unsigned long t=_DSL_DATA_RATE;
-			if( DoModemCmd(_DSL_READ_CONTROL, &t, 1) )
-            {
-				t=0;
-                t=*((unsigned char*)(cmdp->out_data+1)) & 0x3;
-                t=(t<<8)+*((unsigned char*)(cmdp->out_data));
-                t--;
-				Data.U32=(t<<3) * 10;
-				Debug( 7, this, "Speed from chip=%d, gived to OS=%d\n",t,Data.U32 );
-				Debug( 7, this, "Res from chip: %08x,%08x\n",(char)cmdp->out_data,(char)cmdp->out_data+1);
-            }
-			else
-				Data.U32=0;
-	
-		}
-		else
-			Data.U32=(ModemCfg.rate<<3) * 10;
+		Data.U32=(ModemCfg.rate<<3) * 10;
 		break;
 
 	case OID_GEN_TRANSMIT_BUFFER_SPACE:
@@ -677,6 +663,7 @@ AdapterDesc::ReadModemStatComplete( bool Success )
 
 	NdisMQueryInformationComplete( DriverHandle, Status );
 }
+
 
 /** ----------------------------------------------------------------------------
  * Complete reset stat data

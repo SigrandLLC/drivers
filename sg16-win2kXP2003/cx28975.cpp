@@ -95,8 +95,7 @@ AdapterDesc::DoModemCmd( BYTE Cmd, PCVOID Data, UINT Size,
 	bool	Res=true;
 	if( !ComplRtn )
 	{
-		Assert( KeGetCurrentIrql() <= DISPATCH_LEVEL );//== PASSIVE_LEVEL );
-		Debug( 7, NULL,"Kurrent irq level= %d\n",KeGetCurrentIrql());
+		Assert( KeGetCurrentIrql() == PASSIVE_LEVEL );
 		Res=WaitForModemReply();
 	}
 
@@ -141,12 +140,19 @@ LinkCheckFunc(PVOID sysspiff1, PVOID AdapterContext,
 		if( !ad->ModemCfg.AlwaysConnected )
 		{
 			ad->Indicate( NDIS_STATUS_MEDIA_CONNECT );
+			if( ad->ModemCfg.remcfg && !ad->ModemCfg.master ){
+					ad->ModemCfg.rate=0;
+					ad->ReadLinkStatus( 0 );
+			}
 		}
 	}else if( PrevState == ACTIVE ){
 		ad->DisableReceiver();
 		/* !!!Unlock (); */
 		if( !ad->ModemCfg.AlwaysConnected )
 		{
+			if( ad->ModemCfg.remcfg && !ad->ModemCfg.master ){
+					ad->ModemCfg.rate=0;
+			}
 			ad->Indicate( NDIS_STATUS_MEDIA_DISCONNECT );
 		}
 	}
@@ -166,6 +172,7 @@ AdapterDesc::cx28975_interrupt( void )
 		/* cmdp->intr_host = 0; */
 		if( cmdp->out_ack & MACK_UnsolInt )
 		{
+			Debug( 5, this, "UnsolInt" );
 			if( cmdp->Status_8 & MST8_AsmTransition ){
 				Debug( 5, this, "Timer sheduled" );
 				NdisMSetTimer(&LinkTimer,500);
@@ -532,6 +539,31 @@ AdapterDesc::ReadModemStat( DWORD_PTR Stage )
 		Assert( Stage );
 		DoModemCmd( Cmd, NULL, 0, &AdapterDesc::ReadModemStat, Stage );
 	}
+}
+
+/* -----------------------------------------------------------------------------
+ *    Read modem link status
+ ------------------------------------------------------------------------------- */
+
+void
+AdapterDesc::ReadLinkStatus( DWORD_PTR Stage )
+{
+	Debug( 7, this, "ReadLinkStatus: stage %u", Stage );
+
+	if( !Stage ){
+		Stage++;
+		unsigned long t=_DSL_DATA_RATE;
+		DoModemCmd(_DSL_READ_CONTROL, &t, 1, &AdapterDesc::ReadLinkStatus, Stage );
+		return;
+	}
+
+	WORD t=0;
+	t=(WORD)(*((unsigned char*)(cmdp->out_data+1)) & 0x3);
+	t=(WORD)( (t<<8)+*((unsigned char*)(cmdp->out_data)));
+	t--;
+	ModemCfg.rate=t;
+	Debug( 7, this, "ReadLinkStatus: rate=%u", (ModemCfg.rate<<3)*10);
+	cmdp->out_ack=0;
 }
 
 /* -----------------------------------------------------------------------------
