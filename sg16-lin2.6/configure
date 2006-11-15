@@ -36,7 +36,7 @@ for opt; do
 
     case $opt in 
     
-    --kernel-path=*)
+    --kernel-source=*)
 	    kpath=`echo "$opt" | sed 's/[-_a-zA-Z0-9]*=//'` 
 	    if [ ! -d $kpath ]; then
 		echo $0:" "$kpath": no such directory"
@@ -121,7 +121,7 @@ done
 kver=`uname -r`
 
 # 1. Check that firmware loading module is configured in kernel
-if [ -z $kpath ]; then
+if [ -z "$kpath" ]; then
 
     if [  -d "/lib/modules/"$kver"/build" ]; then
 	kpath="/lib/modules/"$kver"/build"

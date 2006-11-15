@@ -1,4 +1,5 @@
-
+#ifndef CX28975_H
+#define CX28975_H
 enum  CX28975_API_commands {
 	_DSL_RESET_SYSTEM	= 0x00,
 	_DSL_SYSTEM_ENABLE	= 0x01,
@@ -129,3 +130,4 @@ enum  CX28975_acknoledge_status_codes {
 	_ACK_OPER_WAKE_UP	= 0x0e
 };
 
+#endif
