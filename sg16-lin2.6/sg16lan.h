@@ -80,6 +80,8 @@
 
 // -------------------------------------------------------------------------- //
 
+enum sg16_dev_type { sg16pci,sg16isa };
+
 struct sg16_hw_regs {
 	u8  CRA, CRB, SR, IMR, CTDR, LTDR, CRDR, LRDR;
 };
@@ -149,12 +151,13 @@ struct net_local{
     
     struct net_device_stats	stats;
     wait_queue_head_t  wait_for_intr;
+// debug purpose
+wait_queue_head_t  wait_test;
+//--------------------------------
 
     struct device *dev;
-/*     char (*tx_bounce_buffs)[PKT_BUF_SZ];
-    lp->tx_bounce_buffs = kmalloc(PKT_BUF_SZ*TX_RING_SIZE,
-                                                  GFP_DMA | GFP_KERNEL);
-*/						      
+    enum sg16_dev_type dev_type;
+
     // Configuration structures
     struct hdlc_config hdlc_cfg;
     struct shdsl_config shdsl_cfg;
@@ -228,14 +231,15 @@ static struct pci_driver  sg16_driver = {
 
 //---- ISA adapter related ----//
 static struct pnp_device_id sg16_pnp_tbl[] __initdata = {
-        {"AAA0016",(long)"Sigrand SG16-ISA"},
+        {"AAA0016",(long)"Sigrand SG-16ISA"},
         {"",0}     /* terminate list */
 };
 
 MODULE_DEVICE_TABLE(pnp, sg16_pnp_tbl);
 
-static int sg16_isapnp_probe_one(struct pnp_dev *idev,const struct pnp_device_id *dev_id);
-static void sg16_isapnp_remove_one(struct pnp_dev *idev);
+static int __devinit sg16_isapnp_probe_one(struct pnp_dev *idev,
+		const struct pnp_device_id *dev_id);
+static void __devexit sg16_isapnp_remove_one(struct pnp_dev *idev);
 
 static struct pnp_driver sg16_isapnp_driver = {
         name :		"sg16lan",
@@ -243,6 +247,11 @@ static struct pnp_driver sg16_isapnp_driver = {
         probe:          sg16_isapnp_probe_one,
         remove:         sg16_isapnp_remove_one,
 };
+
+#ifndef CONFIG_ISAPNP
+#warning ISA PnP subsystem does not configured in kernel
+#warning enable it first if you use ISA card
+#endif
 
 //---- Net device specific functions ----//
 static int __init  sg16_probe( struct net_device * );

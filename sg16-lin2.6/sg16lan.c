@@ -54,12 +54,12 @@
 #include "cx28975.h"
 #include "sg16lan.h"
 // Debug parameters
-#define DEBUG_ON
-#define DEFAULT_LEV 0
+//#define DEBUG_ON
+#define DEFAULT_LEV 20
 #include "sg16debug.h"
 
 
-MODULE_DESCRIPTION( "Sigrand SG-16PCI driver Version 2.0\n" );
+MODULE_DESCRIPTION( "Sigrand SG-16PCI,SG-16ISA driver Version 3.0\n" );
 MODULE_AUTHOR( "Maintainer: Artem U. Polyakov art@sigrand.ru\n" );
 MODULE_LICENSE( "GPL" );
 MODULE_VERSION("3.0");
@@ -96,7 +96,7 @@ static int __devinit
 sg16_pci_probe_one( struct pci_dev  *pdev,  const struct pci_device_id  *ent )
 {
         struct net_device  *ndev;
-        struct net_local * nl;
+        struct net_local * nl=NULL;
 	u8 err;
 
         if( pci_enable_device( pdev ) )
@@ -112,14 +112,13 @@ sg16_pci_probe_one( struct pci_dev  *pdev,  const struct pci_device_id  *ent )
         ndev->mem_start = pci_resource_start( pdev, 1 );
         ndev->mem_end = pci_resource_end( pdev,1 );
         ndev->irq = pdev->irq;
-	ndev->dma = 0xff;
         // device private data initialisation
 	nl=(struct net_local *)netdev_priv( ndev);
-	memset( nl, 0, sizeof(struct net_local) );
+	memset( nl, 0, sizeof(struct net_local) );	
         nl->dev=&(pdev->dev);
+	nl->dev_type = sg16pci;	
 
         // network interface registration
-PDEBUG(0,"PCI dma mask=%08x",nl->dev->dma_mask);	
         if( register_netdev( ndev ) ) {
 		err=ENODEV;
 		goto err1;
@@ -160,6 +159,8 @@ sg16_pci_remove_one( struct pci_dev  *pdev )
 /* --------------------------------------------------------------------------
  *      ISA adapter initialisation/cleanup
  * -------------------------------------------------------------------------- */
+
+
 
 static int
 sg16_isapnp_probe_one(struct pnp_dev *idev,const struct pnp_device_id *dev_id)
@@ -210,6 +211,7 @@ sg16_isapnp_probe_one(struct pnp_dev *idev,const struct pnp_device_id *dev_id)
 	nl=(struct net_local *)netdev_priv( ndev);
 	memset( nl, 0, sizeof(struct net_local) );
 	nl->dev=(struct device*)&(idev->dev);
+	nl->dev_type = sg16isa;
 	// allocate ISA DMA able buffers
 	nl->rbuf=kmalloc(RQLEN*(sizeof(struct dma_buffer)+10),GFP_DMA | GFP_KERNEL);			
 	for(i=0;i<RQLEN;i++)
@@ -225,11 +227,13 @@ sg16_isapnp_probe_one(struct pnp_dev *idev,const struct pnp_device_id *dev_id)
 	ndev->irq = pnp_irq(idev, 0);
 	ndev->dma = pnp_dma(idev,0);
 
+	PDEBUG(0,"start registering netdev");
 	// network interface initialisation
 	if( (error=register_netdev(ndev) ) ) {
 		PDEBUG(0,"Fail to register network device");
 		goto fail2;
 	}
+	PDEBUG(0,"end");	
 	return 0;	
 fail2:
 	free_netdev(ndev);
@@ -268,9 +272,16 @@ sg16_isapnp_remove_one(struct pnp_dev *idev)
 	pnp_device_detach( idev );
 }
 
+#ifdef CONFIG_ISAPNP
+#ifdef SG16ISA_SUPPORT
+#warning ISA PnP support is disabled in kernel. Turn it on
+#endif
+#endif
+
 /* --------------------------------------------------------------------------
  *   Network device functions   
  * -------------------------------------------------------------------------- */
+
 static int __init
 sg16_probe( struct net_device  *ndev )
 {
@@ -297,7 +308,7 @@ sg16_probe( struct net_device  *ndev )
 	ndev->tx_timeout		= &sg16_tx_timeout;
         ndev->watchdog_timeo	= TX_TIMEOUT;
 
-
+	PDEBUG(0,"start registering mem region");
 	if( !request_mem_region( ndev->mem_start, 0x1000, ndev->name ) )
 		return  -ENODEV;
 	PDEBUG(8,"request_mem_region - ok");	
@@ -313,6 +324,7 @@ sg16_probe( struct net_device  *ndev )
         nl->regs = (struct sg16_hw_regs *) ((u8 *)nl->mem_base + SG16_REGS_OFFSET);
 	nl->cmdp = (struct cx28975_cmdarea *) ((u8 *)nl->mem_base + SG16_CMDP_OFFSET);
 
+	PDEBUG(0,"start registering irq");
         if( request_irq(ndev->irq, sg16_interrupt, SA_SHIRQ, ndev->name, ndev) ){
 	        printk( KERN_ERR "%s: unable to get IRQ %d.\n",
     		    		ndev->name, ndev->irq );
@@ -320,7 +332,7 @@ sg16_probe( struct net_device  *ndev )
         }
 	PDEBUG(8,"request_irq - ok");		
 	
-	if( ndev->dma !=0xff ){
+	if(nl->dev_type == sg16isa){
 	    	if( (err=request_dma(ndev->dma,"sg16lan")) ){
 			PDEBUG(0,"dma not registered, error=%d",err);
 			goto err_exit1;
@@ -329,7 +341,7 @@ sg16_probe( struct net_device  *ndev )
 		enable_dma(ndev->dma);
 	}
 	
-	if( ndev->dma == 0xff )	
+	if( nl->dev_type == sg16pci )	
 	        printk( KERN_NOTICE "%s: Sigrand SG-16PCI SHDSL (irq %d, mem %#lx)\n",
 			ndev->name, ndev->irq, ndev->mem_start );
 	else 
@@ -375,7 +387,7 @@ sg16_probe( struct net_device  *ndev )
 
     return  0;
 err_exit2:    
-	if( ndev->dma != 0xff )
+	if(nl->dev_type == sg16isa)
 		free_dma(ndev->dma);
 err_exit1:
 	free_irq( ndev->irq, ndev );    
@@ -576,7 +588,11 @@ shdsl_ready( struct net_local *nl, u16 expect_state)
         u32 ret;
 
 	if( (nl->irqret & 0x1f) != expect_state ){
+//		PDEBUG(0,"sleep on... start");
+		u32 tmp=jiffies;
 		ret=interruptible_sleep_on_timeout( &nl->wait_for_intr, HZ*10 );
+//		PDEBUG(0,"sleep on end, time=%d",jiffies-tmp);
+//		mdelay(1000);
 		if( ( nl->irqret & 0x1f) != expect_state ){
     		        PDEBUG(5,"fail wait, irqret=%02x expect=%02x",
 					nl->irqret & 0x1f,0xff);
@@ -952,7 +968,7 @@ xmit_isa_skb_to_dma(struct net_local *nl,struct sk_buff **skb_in,int elem)
 {
 	struct sk_buff *skb=*skb_in;
 	struct dma_buffer *b=(struct dma_buffer *)nl->xbuf+elem;
-//	PDEBUG(0,"xbuf: strt=%08x,offs=%d,adr=%08x",(u32)nl->xbuf,(int)elem,(u32)b);
+	PDEBUG(0,"xbuf: strt=%08x,offs=%d,adr=%08x",(u32)nl->xbuf,(int)elem,(u32)b);
 	memcpy(b->buff,skb->data,skb->len);
 	if( skb->len<ETHER_MIN_LEN ){
 		memset((u8*)b->buff+skb->len,0,ETHER_MIN_LEN-skb->len);
@@ -994,7 +1010,7 @@ xmit_skb_to_dma(struct net_device *ndev,struct sk_buff **skb,int elem)
 {
         struct net_local  *nl  = (struct net_local *)netdev_priv(ndev);	
 	
-	if( (ndev->dma != 0xff) && 
+	if( (nl->dev_type == sg16isa) && 
 		(isa_virt_to_bus((*skb)->data)+(*skb)->len > ISA_DMA_MAXADDR) )
 		return xmit_isa_skb_to_dma(nl,skb,elem);
 	else
@@ -1010,7 +1026,6 @@ sg16_start_xmit( struct sk_buff *skb, struct net_device *ndev )
 	void *cpu_addr;
         unsigned  cur_tbd;
 	int error=0;
-
         if ( !netif_carrier_ok(ndev) ){
 		dev_kfree_skb_any( skb );
 		return 0;
@@ -1018,13 +1033,11 @@ sg16_start_xmit( struct sk_buff *skb, struct net_device *ndev )
 
 	// fix concurent racing in transmit 
         spin_lock_irqsave( &nl->xlock, flags );
-
 	if( nl->tail_xq == ((nl->head_xq - 1) & (XQLEN - 1)) ) {
     		netif_stop_queue( ndev );
 		error=-EBUSY;
 		goto  err_exit;
         }	
-
 	cpu_addr = xmit_skb_to_dma(ndev,&skb,nl->tail_xq);
 	if( !cpu_addr ){
 		error=-ENOMEM;
@@ -1091,7 +1104,7 @@ recv_skb_sync_one(struct net_device *ndev,int len,int elem)
         struct net_local  *nl  = (struct net_local *)netdev_priv(ndev);		
 	struct sk_buff *skb = nl->rq[ elem ];
 	
-	if( (ndev->dma != 0xff) && 
+	if( (nl->dev_type == sg16isa) && 
 		    (isa_virt_to_bus(skb->data)+skb->len > ISA_DMA_MAXADDR) ){
     		struct dma_buffer *b = (struct dma_buffer *)nl->rbuf + elem;
 		memcpy(skb->data,b->data,len);
@@ -1104,7 +1117,7 @@ recv_skb_to_dma(struct net_device *ndev,struct sk_buff *skb,int elem)
 {
         struct net_local  *nl  = (struct net_local *)netdev_priv(ndev);
 	struct dma_buffer *b = (struct dma_buffer *)nl->rbuf + elem;	
-	if( (ndev->dma != 0xff) &&
+	if( (nl->dev_type == sg16isa) &&
 		    isa_virt_to_bus(skb->data)+skb->len > ISA_DMA_MAXADDR )
 		    return (void*)b->buff;
 	return (void*)skb->data;

@@ -7,6 +7,7 @@ print_usage()
     echo "                              kernel configuration"       
     echo "   --kernel-source=<path>   - spesify directory, containing kernel sources"
     echo "   --autostart-off          - disable device start at boot time"
+    echo "   --isa-support            - if you need SG-16ISA support"    
     echo "   --firmware-path=<path>   - spesify directory, wich used to load firmware"    
     echo "                              by default <path>=/lib/firmware"        
 
@@ -44,9 +45,15 @@ for opt; do
     	    fi
 	    ;;
     --autostart-off)
-	    echo "no autostart"
+	    echo "Automatic firmware download - off"
 	    cflags=$cflags"-DAUTOSTART_OFF "
 	    ;;
+
+    --isa-support)
+	    echo "SG-16ISA card support       - on"
+	    cflags=$cflags"-DSG16ISA_SUPPORT"
+	    ;;
+
     --firmware-path=*)
 	    fpath=`echo "$opt" | sed 's/[-_a-zA-Z0-9]*=//'` 
 	    ;;
@@ -113,6 +120,10 @@ for opt; do
     --no-proc-cfg)
 	    pcfg="no"
 	    ;;
+    *)
+	    echo $0": bad parameter: \"$opt\""
+	    exit
+	    ;;
     esac
 done
 
@@ -141,7 +152,6 @@ if [ $pcfg = "yes" ]; then
 	zcat /proc/config.gz > config.tmp    
         conf_file=`pwd`"/config.tmp"
     else
-	echo "2"
 	conf_file=$kpath"/.config"
     fi
 else
