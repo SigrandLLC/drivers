@@ -272,12 +272,6 @@ sg16_isapnp_remove_one(struct pnp_dev *idev)
 	pnp_device_detach( idev );
 }
 
-#ifdef CONFIG_ISAPNP
-#ifdef SG16ISA_SUPPORT
-#warning ISA PnP support is disabled in kernel. Turn it on
-#endif
-#endif
-
 /* --------------------------------------------------------------------------
  *   Network device functions   
  * -------------------------------------------------------------------------- */
@@ -421,9 +415,10 @@ sg16_interrupt( int  irq,  void  *dev_id,  struct pt_regs  *regs )
 
 	if( status & UFL )
 	{
+	    PDEBUG(15"%s: UFL, CRA=%02x\n",dev->name,ioread8((iotype)&(nl->regs->CRA)));	
+	    iowrite8( UFL,(iotype)&(nl->regs->SR));				
 	    iowrite8( ioread8((iotype)&(nl->regs->CRA)) | TXEN,
 	    	    (iotype)&(nl->regs->CRA) );
-	    iowrite8( UFL,(iotype)&(nl->regs->SR));				
 	    ++nl->in_stats.ufl_errs;
 	    ++nl->stats.tx_errors;
 	    ++nl->stats.tx_fifo_errors;
@@ -588,11 +583,7 @@ shdsl_ready( struct net_local *nl, u16 expect_state)
         u32 ret;
 
 	if( (nl->irqret & 0x1f) != expect_state ){
-//		PDEBUG(0,"sleep on... start");
-		u32 tmp=jiffies;
 		ret=interruptible_sleep_on_timeout( &nl->wait_for_intr, HZ*10 );
-//		PDEBUG(0,"sleep on end, time=%d",jiffies-tmp);
-//		mdelay(1000);
 		if( ( nl->irqret & 0x1f) != expect_state ){
     		        PDEBUG(5,"fail wait, irqret=%02x expect=%02x",
 					nl->irqret & 0x1f,0xff);
@@ -1215,15 +1206,15 @@ sg16_tx_timeout( struct net_device  *ndev )
 {
         struct net_local  *nl  = (struct net_local *)netdev_priv(ndev);		
 	u8 tmp;
-	    
-	printk( KERN_ERR "%s: transmit timeout\n", ndev->name );
+
+	tmp=ioread8((iotype)&(nl->regs->IMR));
+        iowrite8( 0,(iotype)&(nl->regs->IMR));	    
+	udelay(10);
+        iowrite8( tmp,(iotype)&(nl->regs->IMR));		
+	
+	PDEBUG(5,"%s: transmit timeout\n", ndev->name );
         if( ioread8( (iotype)&(nl->regs->SR)) & TXS ){
-	        iowrite8( TXS,(iotype)&(nl->regs->SR));
-		tmp=ioread8((iotype)&(nl->regs->IMR));
-	        iowrite8( 0,(iotype)&(nl->regs->IMR));				
-		udelay(10);
-	        iowrite8( tmp,(iotype)&(nl->regs->IMR));		
-    		printk( KERN_ERR "%s: interrupt posted but not delivered\n",
+    		PDEBUG(5,"%s: interrupt posted but not delivered\n",
     			ndev->name );
         }
 	xmit_free_buffs( ndev );

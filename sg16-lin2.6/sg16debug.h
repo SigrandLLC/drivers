@@ -11,8 +11,9 @@
 #       define PDEBUG(lev,fmt,args...) \
 		if( lev<=DEFAULT_LEV ) \
 			printk(KERN_NOTICE "sg16lan: %s " fmt " \n",__FUNCTION__, ## args  )
-#endif
 static int xmit_debug=0;
 static int recv_debug=0;
 static int irq_debug=0;
+#endif
+
 #endif		    

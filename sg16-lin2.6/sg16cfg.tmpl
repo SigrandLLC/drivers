@@ -1,5 +1,9 @@
 #!/bin/bash
-
+# Sigrand SG-16PCI and SG16-ISA configuration tool 
+# for Linux kernel v 2.6
+#
+#	Written 2006  Artem U. Polyakov
+#
 #---------------------------------------------------------
 
 dload_fw()
@@ -113,7 +117,7 @@ if [ $# = 0 ]; then
     echo "  rate auto [<value>]        - auto line rate (up to 2304 in auto mode)"    
     echo "                               2304 by default"
     echo "  crc32 | crc16              - CRC length"
-    echo "  netaddr <value>            - less significant part of MAC-address"
+    echo "  mac-addr <value>           - less significant part of MAC-address"
     echo "  rboff | rbon               - PCI read burst mode off"
     echo "  wboff | wbon               - PCI write burst mode off"
     echo "  fill_ff | fill_7e          - fill byte value"
@@ -296,7 +300,17 @@ while [ ! -z $1 ]; do
 	    fi
 	    shift
 	fi
-	;;    
+	;;
+
+    "mac-addr")
+	if [ -z $2 ]; then
+	    echo $0": syntax error, after \"annex\" "
+	    break
+	fi
+	echo "$2" > maddr 
+	shift
+	;;
+	    
     "tcpam32")
 	echo 0 > mod 
 	;;
