@@ -1,10 +1,12 @@
-Sigrand SG16-PCI modem
-Linux driver for 2.6.x kernel, version 1.2, date 28.03.2006
+Linux driver for Sigrand SG-16PCI and  SG-16ISA modems
+for Linux kernel v2.6.x.
+Version: 2.0
+Date:    20.11.2006
 
 1. Introduction
 
-This driver supports Sigrand SG-16PCI modems under Linux operating system
-as standard ethernet-like netrwork interface.
+This driver supports Sigrand SG-16PCI, SG-16ISA  modems under Linux operating 
+system as standard ethernet-like netrwork interface.
 
 2. Installation
 
@@ -13,15 +15,21 @@ hotplug firmware loading support.
 
 Installation steps
 2.1. run `./configure [options]` ( ./configure --help to see list of available options ).
-     This program will check configuration of specified kernel and generate 
-     Makefile and configuration utility.
-     ( ./configure checks /proc/config.gz (if this option was set in the kernel).
-       If you compile driver not for current kernel, use option --no-proc-cfg 
-       of configure script. 
-       If /proc/config.gz is missing, ./configure use <Linux-Kernel-Path>/.config 
-       file to ensure that necessary options in kernel are switched on, so if 
-       your .config file does not respond to real configuration of kernel,
-       simply set those options by `make menuconfig` without any kernel compilation )
+This program will check configuration of specified kernel and generate 
+Makefile and configuration utility.
+
+./configure checks /proc/config.gz (if this option was set in the kernel).
+If you compile driver not for current kernel, use option --no-proc-cfg 
+of configure script. 
+If /proc/config.gz is missing, ./configure use <Linux-Kernel-Path>/.config 
+file to ensure that necessary options in kernel are switched on, so if 
+your .config file does not respond to real configuration of kernel,
+simply set those options by `make menuconfig` without any kernel compilation
+
+Support of ISA cards is optional. If you have SG-16ISA card, run ./configure
+with `--isa-support` option. For correct driver work you need ISA PnP sybsystem
+enabled in kernel, if not - you will get warnings at compile time.
+     
 2.2. `make install`
 
 After installation you will have:
@@ -44,8 +52,7 @@ sg16cfg:
 4. Driver Configuration
 
 After you've loaded  module(using insmod command) you may see that few
-dsl* devices appear in your system( as much as Sigrand SG-16PCI modems you
-have).
+dsl* devices appear in your system( as much as Sigrand modems you have).
 
 When driver starts by default it will download firmware during loading. You can 
 turn this feature off with `./configure --autostart-off` (see installation 
@@ -54,7 +61,7 @@ which will be applied at driver loading.
 
 To change default modem settings:
 4.1. `ifconfig dslX down`  ( if it was up )
-4.2. use sg16cfg SG-16PCI configuration utility to change settings
+4.2. use sg16cfg SG-16 configuration utility to change settings
 4.3. `ifconfig dslX up` ( for applying changes )
 
 MAC address assign:

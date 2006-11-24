@@ -11,8 +11,8 @@
  *
  *	10.11.2005	initial revision of Granch SBNI16 modem driver v1.0 
  *                      wtitten by Denis I. Timofeev - Artem U. Polyakov <art@sigrand.ru>
- *	11.12.2005	Version 2.0 (sysfs, firmware hotplug) - Artem U. Polyakov <art@sigrand.ru>
- *	05.11.2006	Version 3.0 (ISA adapter support) - Artem U. Polyakov <art@sigrand.ru>
+ *	11.12.2005	Version 1.0 (sysfs, firmware hotplug) - Artem U. Polyakov <art@sigrand.ru>
+ *	05.11.2006	Version 2.0 (ISA adapter support) - Artem U. Polyakov <art@sigrand.ru>
  */
 
 #include <linux/init.h>
@@ -59,10 +59,10 @@
 #include "sg16debug.h"
 
 
-MODULE_DESCRIPTION( "Sigrand SG-16PCI,SG-16ISA driver Version 3.0\n" );
+MODULE_DESCRIPTION( "Sigrand SG-16PCI,SG-16ISA driver Version 2.0\n" );
 MODULE_AUTHOR( "Maintainer: Artem U. Polyakov art@sigrand.ru\n" );
 MODULE_LICENSE( "GPL" );
-MODULE_VERSION("3.0");
+MODULE_VERSION("2.0");
 
 /* --------------------------------------------------------------------------
  *      Module initialisation/cleanup
@@ -396,13 +396,14 @@ sg16_interrupt( int  irq,  void  *dev_id,  struct pt_regs  *regs )
 {
 	struct net_device *dev = (struct net_device *) dev_id;
 	struct net_local  *nl  = (struct net_local *)netdev_priv(dev);		
-
 	u8 status = ioread8((iotype)&(nl->regs->SR));
-	u8 mask = ioread8((iotype)&(nl->regs->IMR));
-	iowrite8( 0, (iotype)&(nl->regs->IMR));
-	    
+	u8 mask;
+
 	if( status == 0 )
 		return IRQ_NONE;
+
+	mask = ioread8((iotype)&(nl->regs->IMR));
+	iowrite8( 0, (iotype)&(nl->regs->IMR));
 
 	if( status & EXT )
 	{
@@ -1775,9 +1776,9 @@ show_fill_7e( struct device *dev, ADDIT_ATTR char *buf )
 	struct hdlc_config *cfg=&(nl->hdlc_cfg);
 
         if( cfg->fill_7e )
-		return snprintf(buf,PAGE_SIZE,"on");
+		return snprintf(buf,PAGE_SIZE,"0x7E");
         else
-		return snprintf(buf,PAGE_SIZE,"off");    
+		return snprintf(buf,PAGE_SIZE,"0xFF");    
 }
 
 static ssize_t

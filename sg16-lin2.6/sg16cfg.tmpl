@@ -2,7 +2,7 @@
 # Sigrand SG-16PCI and SG16-ISA configuration tool 
 # for Linux kernel v 2.6
 #
-#	Written 2006  Artem U. Polyakov
+#	Written 2006 by Artem U. Polyakov
 #
 #---------------------------------------------------------
 
@@ -28,6 +28,7 @@ print_stat()
 	exit
     fi
     prog_name=$0
+    IFACE=$1
     CARD=$2
 
     master=`cat master`
@@ -38,36 +39,43 @@ print_stat()
     state=`cat state`     
     mode=`cat remcfg`
     annex=`cat annex`    
-    echo "---------------------------------------"
-    echo "Sigrand SG-16${CARD} SHDSL modem statistics"
-    echo "State:     "$state 	
-    echo "Settings:  Rate="$rate1" of "$rate2"("$auto") "$code" "$master
-    echo "           Cfg="$mode" "$annex
+    rb=`cat rburst`
+    wb=`cat wburst`
+    fill=`cat fill_7e`
+    inv=`cat inv`
+    crc=`cat crc16`
+
+    echo "SIGRAND SG-16${CARD} SHDSL modem statistics"
+    echo "$1:    "$state
+    echo "shdsl:   "$master" "$code" cfg="$mode" "$annex
+    echo "         rate="$rate1" of "$rate2"("$auto")"
+    echo "hdlc:    fill="$fill" inversion="$inv" "$crc
+    if [ "$CARD" = "PCI" ]; then
+    echo "PCI bus: rb"$rb" wb"$wb
+    fi
+
     set `cat statistic`
     
     if [ ! $# -eq  10 ];then
 	echo $prog_name": error, getting statistic"
 	exit
     fi
-    echo "Traffic statistics"
-    echo "     Frames send      : "$1
-    shift
-    echo "     Frames received  : "$1
-    shift
-    echo "     CRC errors       : "$1
-    shift
-#    echo "     Bytes send       : "$1
+#    echo "Traffic statistics"
+#    echo "     Frames send      : "$1
+    shift 3
+#    echo "     Frames received  : "$1
 #    shift
-#    echo "     Bytes received   : "$1
+#    echo "     CRC errors       : "$1
 #    shift
-    echo "SHDSL statistics"
-    echo -n "     Retrain          : "$1
+    echo "________________________________________"
+    echo "shdsl statistics"
+    echo -n "      Retrain          : "$1
     shift
     echo " of "$1
     shift
-    echo "     Loss of sync word: "$1
+    echo "      Loss of sync word: "$1
     shift
-    echo "     CRC6 errors      : "$1
+    echo "      CRC6 errors      : "$1
     shift
     a=`expr $1 / 2`
     tmp=`expr $1 % 2`
@@ -76,7 +84,7 @@ print_stat()
     else 
 	b=".0"
     fi
-    echo "     Line attenuation : "$a$b" dB"
+    echo "      Line attenuation : "$a$b" dB"
     shift
     a=`expr $1 / 2`
     tmp=`expr $1 % 2`
@@ -85,11 +93,13 @@ print_stat()
     else 
 	b=".0"
     fi
-    echo "     Noise margin     : "$a$b" dB" 
+    echo "      Noise margin     : "$a$b" dB" 
     shift
-    echo "Time statistics"
-    tmp=`perl -e 'print localtime('$1')."\n"'`
-    echo "     Last connect     : "$tmp
+
+    if [ -f /usr/bin/perl ] || [ -f /bin/perl ]; then
+            tmp=`perl -e 'print localtime('$1')."\n"'`
+            echo "      Last connect     : "$tmp
+    fi
     shift
     
 }
@@ -176,7 +186,7 @@ if [ $# = 1 ]; then
 fi
 if [ $2 = "stat" -o $2 = "STAT" ]; then
     if [ $# = 2 ]; then
-	print_stat $0 $interf	
+	print_stat $interf $CARD
 	exit
     elif [ $# = 3 -a $3 = "reset" ] || [ $# = 3 -a $3 = "RESET" ]; then
 	echo "Reset stat"
@@ -304,7 +314,7 @@ while [ ! -z $1 ]; do
 
     "mac-addr")
 	if [ -z $2 ]; then
-	    echo $0": syntax error, after \"annex\" "
+	    echo $0": syntax error, after \"mac-addr\" "
 	    break
 	fi
 	echo "$2" > maddr 
