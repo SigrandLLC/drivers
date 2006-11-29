@@ -287,6 +287,7 @@ sg16_probe( struct net_device  *ndev )
 
         // Carrier off
         netif_carrier_off( ndev );
+	netif_stop_queue(ndev);
 	PDEBUG(8,"start");	
     
 	// generate 'unique' MAC address
@@ -503,6 +504,7 @@ sg16_open( struct net_device  *ndev )
         // enable receive/transmit functions 
 	hdlc_init(nl);
         memset( &nl->stats, 0, sizeof(struct net_device_stats) );
+	netif_wake_queue( ndev );		
 	return 0;
 }
 
@@ -513,7 +515,9 @@ sg16_close( struct net_device  *ndev )
 	unsigned long  flags;    
 
         // disable receive/transmit functions
-	iowrite8( XRST ,(iotype)&(nl->regs->CRA));       			    
+	iowrite8( XRST ,(iotype)&(nl->regs->CRA));
+	netif_tx_disable(ndev);
+	
         // drop receive/transmit queries 
 	spin_lock_irqsave( &nl->rlock, flags );
         recv_free_buffs( ndev );
@@ -935,7 +939,7 @@ shdsl_link_chk( unsigned long data )
 			iowrite8( _ACK_NOT_COMPLETE, (iotype)&(p->out_ack) );
 			iowrite8( 0xfe, (iotype)&(p->intr_8051) );
 			// enable packet receiving-transmitting
-			netif_wake_queue( ndev );
+
 			netif_carrier_on( ndev );
 		}	// link down
 		else if( ( ioread8( (iotype)((u8*)p + 0x3c0) ) & 0xc0) != 0x40 )	{
@@ -943,7 +947,6 @@ shdsl_link_chk( unsigned long data )
 			iowrite8( ioread8( (iotype)&(nl->regs->CRB) ) | RXDE,
 				    (iotype)&(nl->regs->CRB) );
 			iowrite8( EXT, (iotype)&(nl->regs->IMR) );    			
-			netif_stop_queue( ndev );
 			netif_carrier_off( ndev );
 		}
 	}
