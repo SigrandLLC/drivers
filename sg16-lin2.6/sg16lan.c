@@ -1210,7 +1210,10 @@ sg16_tx_timeout( struct net_device  *ndev )
 
 	tmp=ioread8((iotype)&(nl->regs->IMR));
         iowrite8( 0,(iotype)&(nl->regs->IMR));	    
-	udelay(10);
+	udelay(1);
+	if( netif_carrier_ok(ndev) )
+		iowrite8(ioread8((iotype)&(nl->regs->CRA)) | TXEN,
+				    (iotype)&(nl->regs->CRA));
         iowrite8( tmp,(iotype)&(nl->regs->IMR));		
 	
 	PDEBUG(5,"%s: transmit timeout\n", ndev->name );

@@ -15,7 +15,7 @@
 #define SG16_RBD_OFFSET 0x400
 #define SG16_REGS_OFFSET 0x800
 #define SG16_CMDP_OFFSET 0xc00
-// CR bits 
+// CRA bits 
 #define	TXEN	0x01		// transmitter enable 
 #define	RXEN	0x02		// receiver  enable 
 #define	NCRC	0x04		// ignore received CRC 
