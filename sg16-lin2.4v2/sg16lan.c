@@ -55,7 +55,7 @@
 #include "sg16lan.h"
 #include "cx28975.h"
 // Debug parameters
-#define DEBUG_ON
+//#define DEBUG_ON
 #define DEFAULT_LEV 5
 #include "sg16debug.h"
 
@@ -527,14 +527,13 @@ sg16_ioctl( struct net_device  *dev,  struct ifreq  *ifr,  int  cmd )
     int  error = 0;
     int err;
 
-PDEBUG(9,"ioctl: start\n");
+    PDEBUG(9,"ioctl: start\n");
     if( cmd ==  SIOCDEVLOADFW ){
 
     	if( current->euid != 0 )	/* root only */
 	    return  -EPERM;
     	if( (dev->flags & IFF_UP) == IFF_UP )
     	    return  -EBUSY;
-PDEBUG(9,"ioctl: chk conditions\n");	    
 	if( (error = verify_area( VERIFY_READ, ifr->ifr_data,
      		sizeof(struct cx28975_fw) )) != 0 )
 	    return  error;
@@ -543,18 +542,14 @@ PDEBUG(9,"ioctl: chk conditions\n");
 	if( (error = verify_area( VERIFY_READ, fw.firmw_image,
 			  fw.firmw_len )) != 0 )
 	    return  error;
-PDEBUG(9,"ioctl: verify ifr data\n");
 	if( !(firmw_image = vmalloc( fw.firmw_len )) )
 	    return  -ENOMEM;
 	copy_from_user( firmw_image, fw.firmw_image, fw.firmw_len );
-PDEBUG(9,"ioctl: verify fwimage\n");
 	if( download_firmware( dev, fw.firmw_len, firmw_image ) )
 	    err=-1;
-PDEBUG(9,"ioctl: dload firmware\n");
 	vfree( firmw_image );
-PDEBUG(9,"ioctl: free fwimage\n");
     }
-PDEBUG(9,"ioctl: end\n");
+    PDEBUG(9,"ioctl: end\n");
     return  error;
 }
 
