@@ -1,5 +1,7 @@
-Sigrand SG16-PCI modem
-Linux driver for 2.4.x kernel, version 1.1, date 03.03.2006
+Linux driver for Sigrand SG-16PCI and  SG-16ISA modems
+for Linux kernel v2.4.x.
+Version: 2.0
+Date:    20.11.2006
 
 1. Introduction
 
