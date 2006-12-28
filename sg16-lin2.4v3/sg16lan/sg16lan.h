@@ -1,3 +1,13 @@
+/* sg16lan.h:  Sigrand SG-16PCI, SG-16ISA SHDSL modem driver for 
+ *             linux (kernel 2.4.x)
+ *
+ *      Written 2005-2006 by Artem U. Polyakov <art@sigrand.ru>
+ *
+ *      This driver presents SG-16PCI modem
+ *      to system as common ethernet-like netcard.
+ *
+ */
+       
 #ifndef SG16LAN_H
 #define SG16LAN_H
 
@@ -96,12 +106,11 @@
 // SG16 ioctl cmds 
 #define SIOCDEVLOADFW	 	SIOCDEVPRIVATE
 
-enum State { NOT_LOADED, LOADED };
 enum sg16_dev_type { sg16pci,sg16isa };
 // -------------------------------------------------------------------------- //
 
 struct sg16_hw_regs {
-	u8  CR, CRB, SR, IMR, CTDR, LTDR, CRDR, LRDR;
+	u8  CRA, CRB, SR, IMR, CTDR, LTDR, CRDR, LRDR;
 };
 
 struct hw_descr {
@@ -151,9 +160,11 @@ struct cx28975_cfg {
 	u32  netaddr: 12;
 	u32  remcfg: 1;
 	u32  autob: 1;
-	u8  autob_en:1;
+	u8   autob_en:1;
 	u8   annex: 2;
-	u8   :5;
+	u8   need_preact: 1;
+	u8   fw_ok: 1;
+	u8   :3;
 };
 
 struct dma_buffer{
@@ -165,6 +176,7 @@ struct dma_buffer{
 
 // net_device private data 
 struct net_local {
+
         struct net_device_stats	stats;
 	wait_queue_head_t  wait_for_intr;
 
@@ -173,10 +185,14 @@ struct net_local {
 		u32  sent_pkts, rcvd_pkts;
 		u32  crc_errs, ufl_errs, ofl_errs, attempts, last_time;
 	} in_stats;
-
-        spinlock_t	lock;
+	
+	// procfs related data 
+        struct proc_dir_entry *ents[PFS_ENTS];
+	struct cx28975_cfg cfg;
 	enum sg16_dev_type dev_type;
-	void 		*mem_base;		// mapped memory address 
+        spinlock_t	xlock,rlock;	
+
+	void 	*mem_base;		// mapped memory address 
         volatile struct sg16_hw_regs	*regs;
 	volatile struct hw_descr	*tbd;
         volatile struct hw_descr	*rbd;
@@ -184,19 +200,14 @@ struct net_local {
 
         // transmit and reception queues 
 	struct sk_buff	*xq[ XQLEN ], *rq[ RQLEN ];
-        unsigned	head_xq, tail_xq, head_rq, tail_rq;
+        unsigned head_xq, tail_xq, head_rq, tail_rq;
         struct dma_buffer *rbuf,*xbuf;
-	// the descriptors mapped onto the first buffers in xq and rq 
-        unsigned	head_tdesc, head_rdesc;
-	u8		state;
+        unsigned head_tdesc, head_rdesc;
 	
         // interrupt related data 
 	u8 irqret;
         struct timer_list link_state;
     
-	// procfs related data 
-        struct proc_dir_entry *ents[PFS_ENTS];
-	struct cx28975_cfg cfg;
 };
 
 // SHDSL transceiver statistics 
@@ -259,15 +270,11 @@ static int  sg16_ioctl( struct net_device *, struct ifreq *, int );
 static struct net_device_stats  *sg16_get_stats( struct net_device * );
 static void  set_multicast_list( struct net_device * );
 
-//---- Chipset functions ----//
-static void  cx28975_interrupt( struct net_device * );
-static void  shdsl_link_chk( unsigned long );
-static void  indicate_frames( struct net_device * );
-static void  alloc_rx_buffers( struct net_device * );
-static void  free_sent_buffers( struct net_device *, int );
-static void  drop_rq( struct net_local * );
-static void  activate( struct net_device * );
-static void  deactivate( struct net_device * );
+//---- Functions, serving transmit-receive process ----//
+static void  recv_init_frames( struct net_device * );
+static int   recv_alloc_buffs( struct net_device * );
+static void  recv_free_buffs( struct net_device * );
+static void  xmit_free_buffs( struct net_device * );
 static void  sg16_tx_timeout( struct net_device * );
 
 //---- procfs control ----//
@@ -285,12 +292,17 @@ static int show_stats(char *,char **,off_t,int,int *,void *);
 static int show_bus(char *,char **,off_t,int,int *,void *);
 static int show_hdlc_regs(char *,char **,off_t,int,int *,void *);
 
-//---- shdsl functions ----//
+//---- Chipset functions ----//
+inline void hdlc_shutdown(struct net_local *nl);
+inline void hdlc_init( struct net_local *nl);
 static int  shdsl_ready(struct net_local *, u8 expect);
 static int  download_firmware( struct net_device* , u32 ,u8* );
 static int  preactivation( struct net_device * );
 static int  issue_cx28975_cmd( struct net_local *, u8, u8 *, u8 );
 static int  shdsl_get_stat(struct net_local *nl, struct dsl_stats *ds);
 static int  shdsl_clr_stat( struct net_local  *nl );
+static void  cx28975_interrupt( struct net_device * );
+static void  shdsl_link_chk( unsigned long );
+
 
 #endif // SG16LAN_H

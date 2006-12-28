@@ -14,9 +14,9 @@
 static int xmit_debug=10;
 static int recv_debug=10;
 static int irq_debug=10;
-static int debug_init=10;
+static int debug_init=0;
 static int debug_ioctl=10;
-static int debug_hw=10;
+static int debug_hw=0;
 static int debug_procfs=10;
 
 
