@@ -1,3 +1,0 @@
-ifeq (-D__KERNEL__ -I/usr/src/linux-2.4.32/include -Wall -Wstrict-prototypes -Wno-trigraphs -O2 -fno-strict-aliasing -fno-common -pipe -mpreferred-stack-boundary=2 -march=athlon -DMODULE -DMODVERSIONS -include /usr/src/linux-2.4.32/include/linux/modversions.h -nostdinc -iwithprefix include,$(strip $(subst $(comma),:,$(CFLAGS) $(EXTRA_CFLAGS_nostdinc) $(CFLAGS_sg16lan.o))))
-FILES_FLAGS_UP_TO_DATE += sg16lan.o
-endif
