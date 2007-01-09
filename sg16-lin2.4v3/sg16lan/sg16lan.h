@@ -304,5 +304,30 @@ static int  shdsl_clr_stat( struct net_local  *nl );
 static void  cx28975_interrupt( struct net_device * );
 static void  shdsl_link_chk( unsigned long );
 
+//---- Inter kernel portability ----//
+#undef sg16_alloc_netdev
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,23)
+
+void
+dsl_init( struct net_device *ndev)
+{
+        ether_setup(ndev);
+	ndev->init = sg16_probe;
+}
+#define sg16_alloc_netdev(sz) \
+	alloc_netdev(sz,"dsl%d",dsl_init)
+	
+#else
+
+#define sg16_alloc_netdev(sz) \
+	alloc_etherdev(sz)
+
+#endif /* checking for alloc_netdev existence */
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,4,22)
+
+#define netif_tx_disable(dev) netif_stop_queue(dev)
+
+#endif /* checking netif_tx_disable existence */
 
 #endif // SG16LAN_H

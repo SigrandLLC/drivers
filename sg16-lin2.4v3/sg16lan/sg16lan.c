@@ -21,6 +21,7 @@
  *	05.07.2006 Version 2.0 (added control through procfs)  - Artem Plyakov
  *	25.11.2006 Version 3.0 (SG-16ISA card support) - Artem Plyakov
  *	26.11.2006 version 3.1 (fix building, fix interrupt handling) - Artem Polyakov
+ *	30.12.2006 version 3.2 (backward port to 2.4.20 version) - Artem Polyakov 
  */
  
 #include <linux/config.h>
@@ -94,14 +95,6 @@ cleanup_module( void )
 
 }
 
-void
-dsl_init( struct net_device *ndev)
-{
-        ether_setup(ndev);
-	ndev->init = sg16_probe;
-}
-
-
 /* --------------------------------------------------------------------------
  *      PCI adapter initialisation/cleanup
  * -------------------------------------------------------------------------- */
@@ -121,7 +114,7 @@ sg16_pci_probe_one( struct pci_dev  *pdev,  const struct pci_device_id  *ent )
 	pci_set_master(pdev);
 
 	// allocate memory for network device
-	if( !( ndev = alloc_netdev( sizeof(struct net_local),"dsl%d",dsl_init)) ){
+	if( !( ndev = sg16_alloc_netdev( sizeof(struct net_local))) ){
 		error = -ENOMEM;
 		goto err_exit;
 	}
@@ -129,11 +122,12 @@ sg16_pci_probe_one( struct pci_dev  *pdev,  const struct pci_device_id  *ent )
 	// set pci device data field
 	pci_set_drvdata( pdev, ndev );
 	// set some net device fields
+	ndev->init = sg16_probe;
 	ndev->mem_start = pci_resource_start( pdev, 1 );
 	ndev->mem_end = pci_resource_end( pdev,1 );
 	ndev->irq = pdev->irq;
 	// device private data initialisation   
-	nl=(struct net_local *)netdev_priv( ndev);
+	nl=(struct net_local *)ndev->priv;
 	memset( nl, 0, sizeof(struct net_local) );
 	nl->dev_type=sg16pci;
 	PDEBUG(debug_init,"before register_netdev");
@@ -214,7 +208,7 @@ sg16_isapnp_probe_one( struct pci_dev  *idev,  const struct isapnp_device_id  *e
 {
 	struct net_device  *ndev;
 	struct net_local *nl;
-	int error=0;
+	int error=0,i;
 	
 	PDEBUG(debug_init,"start");
 	PDEBUG(debug_init,"pdev=%08x",idev);
@@ -232,7 +226,7 @@ sg16_isapnp_probe_one( struct pci_dev  *idev,  const struct isapnp_device_id  *e
 	}
 		
 	// allocate memory for network device
-	if( !( ndev = alloc_netdev( sizeof(struct net_local),"dsl%d",dsl_init)) ){
+	if( !( ndev = sg16_alloc_netdev( sizeof(struct net_local) ) ) ){
 		PDEBUG(debug_init,"alloc_netdev fail");
 		error = -ENOMEM;
 		goto err_exit;
@@ -241,13 +235,13 @@ sg16_isapnp_probe_one( struct pci_dev  *idev,  const struct isapnp_device_id  *e
 	// set pci device data field
 	pci_set_drvdata( idev, ndev );
 	// set some net device fields
-	int i;
+	ndev->init = sg16_probe;
 	ndev->mem_start = idev->resource[8].start;
 	ndev->mem_end = idev->resource[8].end;
 	ndev->irq = idev->irq_resource[0].start;
 	ndev->dma = idev->dma_resource[0].start;
 	// device private data initialisation   
-	nl=(struct net_local *)netdev_priv( ndev);
+	nl=(struct net_local *)ndev->priv;
 	memset( nl, 0, sizeof(struct net_local) );
 	nl->dev_type=sg16isa;
 	
@@ -986,7 +980,7 @@ xmit_pci_skb_to_dma(struct net_local *nl,struct sk_buff **skb_in)
 static void*
 xmit_skb_to_dma(struct net_device *ndev,struct sk_buff **skb,int elem)
 {
-        struct net_local  *nl  = (struct net_local *)netdev_priv(ndev);	
+        struct net_local  *nl  = (struct net_local *)ndev->priv;	
 	
 	if( (nl->dev_type == sg16isa) && 
 		( virt_to_bus((*skb)->data)+(*skb)->len > ISA_DMA_MAXADDR) )
@@ -998,7 +992,7 @@ xmit_skb_to_dma(struct net_device *ndev,struct sk_buff **skb,int elem)
 static int
 sg16_start_xmit( struct sk_buff *skb, struct net_device *ndev )
 {
-        struct net_local  *nl  = (struct net_local *)netdev_priv(ndev);	
+        struct net_local  *nl  = (struct net_local *)ndev->priv;	
 	unsigned long  flags;
 	void *cpu_addr;
         unsigned  cur_tbd;
@@ -1047,17 +1041,17 @@ err_exit:
 // xmit_free_buffs may also be used to drop the queue - just turn
 // the transmitter off, and set CTDR == LTDR
 static void
-xmit_free_buffs( struct net_device *dev )
+xmit_free_buffs( struct net_device *ndev )
 {
-	struct net_local  *nl  = (struct net_local *)netdev_priv(dev);		
+	struct net_local  *nl  = (struct net_local *)ndev->priv;		
         unsigned  cur_tbd;
 	unsigned long flags;
 
         spin_lock_irqsave(&nl->xlock,flags);
 	
 	cur_tbd = nl->regs->CTDR;
-	if( netif_queue_stopped( dev )  &&  nl->head_tdesc != cur_tbd )
-    		netif_wake_queue( dev );
+	if( netif_queue_stopped( ndev )  &&  nl->head_tdesc != cur_tbd )
+    		netif_wake_queue( ndev );
 		    
         while( nl->head_tdesc != cur_tbd ){
 		// unmap DMA memory 
@@ -1073,7 +1067,7 @@ xmit_free_buffs( struct net_device *dev )
 static struct sk_buff*
 recv_skb_sync_one(struct net_device *ndev,int len,int elem)
 {
-        struct net_local  *nl  = (struct net_local *)netdev_priv(ndev);		
+        struct net_local  *nl  = (struct net_local *)ndev->priv;		
 	struct sk_buff *skb = nl->rq[ elem ];
 	
 	if( (nl->dev_type == sg16isa) && 
@@ -1087,7 +1081,7 @@ recv_skb_sync_one(struct net_device *ndev,int len,int elem)
 static void*
 recv_skb_to_dma(struct net_device *ndev,struct sk_buff *skb,int elem)
 {
-        struct net_local  *nl  = (struct net_local *)netdev_priv(ndev);
+        struct net_local  *nl  = (struct net_local *)ndev->priv;
 	struct dma_buffer *b = (struct dma_buffer *)nl->rbuf + elem;	
 	if( (nl->dev_type == sg16isa) &&
 		    virt_to_bus(skb->data)+skb->len > ISA_DMA_MAXADDR )
@@ -1098,7 +1092,7 @@ recv_skb_to_dma(struct net_device *ndev,struct sk_buff *skb,int elem)
 static void
 recv_init_frames( struct net_device *ndev )
 {
-        struct net_local  *nl  = (struct net_local *)netdev_priv(ndev);		
+        struct net_local  *nl  = (struct net_local *)ndev->priv;		
 	unsigned  cur_rbd = nl->regs->CRDR & 0x7f;
 	struct sk_buff  *skb;
 	unsigned  len;
@@ -1126,7 +1120,7 @@ recv_init_frames( struct net_device *ndev )
 static int
 recv_alloc_buffs( struct net_device *ndev )
 {
-        struct net_local  *nl  = (struct net_local *)netdev_priv(ndev);		
+        struct net_local  *nl  = (struct net_local *)ndev->priv;		
 	unsigned  cur_rbd = nl->regs->LRDR & 0x7f;
 	void *cpu_addr;
         struct sk_buff  *skb;
@@ -1152,7 +1146,7 @@ recv_alloc_buffs( struct net_device *ndev )
 static void
 recv_free_buffs( struct net_device *ndev)
 {
-        struct net_local *nl=(struct net_local *)netdev_priv(ndev);		
+        struct net_local *nl=(struct net_local *)ndev->priv;		
 	unsigned  last_rbd = nl->regs->LRDR & 0x7f;
 	struct sk_buff  *skb;
     
@@ -1171,7 +1165,7 @@ recv_free_buffs( struct net_device *ndev)
 static void
 sg16_tx_timeout( struct net_device  *ndev )
 {
-        struct net_local  *nl  = (struct net_local *)netdev_priv(ndev);		
+        struct net_local  *nl  = (struct net_local *)ndev->priv;		
 	u8 tmp;
 
 	tmp = nl->regs->IMR;
