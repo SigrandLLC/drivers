@@ -13,21 +13,23 @@ export KERNELSOURCEPATH
 sg16lan.o: sg16lan/sg16lan.c sg16lan/sg16lan.h sg16lan/sg16debug.h sg16lan/cx28975.h
 	make -C $(KERNELSOURCEPATH) SUBDIRS="$(PWD)/sg16lan" modules
 
-sg16fw_dload: sg16fw_dload.c
-	gcc -O2 -o sg16fw_dload sg16fw_dload.c
+_sg16fw_dload: sg16fw_dload.c
+	gcc -O2 -o _sg16fw_dload sg16fw_dload.c
 
-all: sg16lan.o sg16fw_dload
+all: sg16lan.o _sg16fw_dload
 
-install:	sg16lan/sg16lan.o sg16fw_dload sg16cfg
+install: sg16lan/sg16lan.o _sg16fw_dload sg16cfg
 	install -m 644 sg16lan/sg16lan.o $(MODULEPATH)
 	install -m 744 sg16cfg /sbin
-	install -s sg16fw_dload /sbin	
+	install -s _sg16fw_dload /sbin	
 
-all:	sg16lan.o sg16fw_dload sg16cfg
+all:	sg16lan.o _sg16fw_dload sg16cfg
 
 
 clean:
-	rm --preserve-root -f sg16lan/sg16lan.o
-	rm --preserve-root -f sg16fw_dload
+	rm -f sg16lan/sg16lan.o
+	rm -f sg16lan/.sg16lan.o.flags
+	rm -f _sg16fw_dload
+
 
 

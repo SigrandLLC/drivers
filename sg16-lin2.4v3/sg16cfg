@@ -7,7 +7,7 @@ dload_fw()
     if [ $# = 0 ]; then
 	exit
     fi    
-    sg16fw_dload $2
+    _sg16fw_dload $2
     tmp=`cat fwloaded`
     if [ ! $tmp = "1" ]
 	then

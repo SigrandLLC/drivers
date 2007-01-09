@@ -98,24 +98,9 @@ error:
 }
 
 static char  usage[] =
-	"\n\nUsage:\n\t%s name [args]\n\n"
-	"If args are omitted, modem statistics will be printed\n"
-	"Possible arguments:\n"
-	"\tmaster | slave\t\tmode: master(STU-C) or slave(STU-R)\n"
-	"\tlrate=<value>\t\tline rate (80 to 4640 kbps, step 8)\n"
-	"\tautorate\t\t\tset auto rate selection mode\n"
-	"\tcfg=[local|preact]\tlocal:  each modem configured localy\n"
-	"\t                  \tpreact: slave(STU-R) configured by master(STU-C)\n"
-	"\tannex=[A|B|F]\t\tG.SHDSL.bis Annex type\n"
-	"\ttcpam32 | tcpam16 |\n"
-	"\ttcpam8  | tcpam4\tline code\n"
-	"\tnetaddr=<value>\t\tless significant part of MAC-address\n"
-	"\tcrc32 | crc16\t\tCRC length\n"
-	"\trboff\t\t\tPCI read burst mode off\n"
-	"\twboff\t\t\tPCI write burst mode off\n"
-	"\tfill_ff | fill_7e\tfill byte value\n"
-	"\tnormal | invert\t\tdata inversion\n\n"
-	"To clear modem statistics use flag -R\n\n";
+	"Usage:\n\t%s name\n"
+	"Download firmware tool for Sigrand\n" 
+	"SG-16PCI or SG-16ISA SHDSL modems\n";
 
 
 static u8  cx28975_firmware[ FIRMW_BYTES ] =
