@@ -195,6 +195,12 @@ if [ -n "$var" ]; then
     echo $0": error: intrface is up"
     exit
 fi
+fw=`cat fwloaded`
+if [ "$fw" != "1" ]; then
+echo "Firmware is not loaded, please use \`sg16cfg dslX reload\`"
+exit
+fi
+
 
 shift
 while [ ! -z $1 ]; do

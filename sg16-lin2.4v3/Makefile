@@ -10,7 +10,7 @@ endif
 
 export KERNELSOURCEPATH
 
-sg16lan.o: sg16lan/sg16lan.c sg16lan/sg16lan.h sg16lan/sg16debug.h sg16lan/cx28975.h
+sg16lan/sg16lan.o: sg16lan/sg16lan.c sg16lan/sg16lan.h sg16lan/sg16debug.h sg16lan/cx28975.h
 	make -C $(KERNELSOURCEPATH) SUBDIRS="$(PWD)/sg16lan" modules
 
 _sg16fw_dload: sg16fw_dload.c
