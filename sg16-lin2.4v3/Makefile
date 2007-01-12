@@ -23,9 +23,6 @@ install: sg16lan/sg16lan.o _sg16fw_dload sg16cfg
 	install -m 744 sg16cfg /sbin
 	install -s _sg16fw_dload /sbin	
 
-all:	sg16lan.o _sg16fw_dload sg16cfg
-
-
 clean:
 	rm -f sg16lan/sg16lan.o
 	rm -f sg16lan/.sg16lan.o.flags
