@@ -16,7 +16,7 @@ sg16lan/sg16lan.o: sg16lan/sg16lan.c sg16lan/sg16lan.h sg16lan/sg16debug.h sg16l
 _sg16fw_dload: sg16fw_dload.c
 	gcc -O2 -o _sg16fw_dload sg16fw_dload.c
 
-all: sg16lan.o _sg16fw_dload
+all: sg16lan/sg16lan.o _sg16fw_dload
 
 install: sg16lan/sg16lan.o _sg16fw_dload sg16cfg
 	install -m 644 sg16lan/sg16lan.o $(MODULEPATH)
