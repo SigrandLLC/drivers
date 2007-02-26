@@ -22,6 +22,7 @@
  *	25.11.2006 Version 3.0 (SG-16ISA card support) - Artem Plyakov
  *	26.11.2006 version 3.1 (fix building, fix interrupt handling) - Artem Polyakov
  *	30.12.2006 version 3.2 (backward port to 2.4.20 version) - Artem Polyakov 
+ *	30.12.2006 version 3.2.6 (fix link up problem + new debug output) - Artem Polyakov 
  */
  
 #include <linux/config.h>
@@ -59,7 +60,7 @@
 #include "cx28975.h"
 // Debug parameters
 //#define DEBUG_ON
-#define DEFAULT_LEV 0
+//#define DEFAULT_LEV 1
 #include "sg16debug.h"
 
 
@@ -282,6 +283,39 @@ err_exit:
  *   Network device functions   
  * -------------------------------------------------------------------------- */
 
+#ifdef DEBUG_ON
+
+static int __init
+sg16_dbg_iomem(struct net_local *nl)
+{
+        int i;
+        //enable chip
+        printk(KERN_NOTICE"---------%s: dump IO memory-----------\n",__FUNCTION__);
+        printk(KERN_NOTICE"HDLC Registers:\n");
+        printk(KERN_NOTICE"CRA %02x; CRB %02x; SR %02x; IMR %02x\n"
+                            "LRDR %02x; CRDR %02x; LTDR %02x; CTDR %02x\n",
+                            nl->regs->CRA,nl->regs->CRB,nl->regs->SR,nl->regs->IMR,
+                            nl->regs->LRDR,nl->regs->CRDR,nl->regs->LTDR,nl->regs->CTDR);
+        printk(KERN_NOTICE"Chipset mem window:\n");
+        for(i=0;i<256;i++){
+                printk("%02x ",*((u8*)nl->cmdp+i));
+                if( (i+1)%26 == 0 )
+                        printk("\n");
+        }
+        printk("\n");
+        printk(KERN_NOTICE"Chipset mem window write test:\n");
+        for(i=0;i<20;i++){
+		printk("%02x -> ",*((u8*)nl->cmdp+i));
+    		*((u8*)nl->cmdp+i) = i+0x80;
+		printk("%02x; ",*((u8*)nl->cmdp+i));
+		if( (i+1)%8 == 0 )
+		        printk("\n");
+	}
+	printk("\n---------------------dump end---------------------\n");
+	return 0;
+}
+
+#endif																																										    
 
 static int __init
 sg16_probe( struct net_device  *ndev )
@@ -383,9 +417,12 @@ sg16_interrupt( int  irq,  void  *dev_id,  struct pt_regs  *regs )
 	u8  mask = nl->regs->IMR;
 	nl->regs->IMR=0;
 	status= (status & mask);	
+	PDEBUG(debug_irq,"status=%d",status);
 
-	if( status == 0 )
+	if( status == 0 ){
+		nl->regs->IMR = mask;
 		return;
+	}
 
 	if( status & EXT )
 		cx28975_interrupt( ndev ),
@@ -472,7 +509,6 @@ sg16_open( struct net_device  *ndev )
 		nl->cfg.need_preact=0;
 	}
 
-
 	// start transmission through interface
 	nl->head_xq = nl->tail_xq = nl->head_rq = nl->tail_rq = 0;	
 	nl->regs->CTDR = nl->regs->LTDR = nl->regs->CRDR = nl->regs->LRDR = 0;	
@@ -537,29 +573,41 @@ sg16_ioctl( struct net_device  *ndev,  struct ifreq  *ifr,  int  cmd )
     int  error = 0;
     int err;
 
-    PDEBUG(debug_ioctl,"ioctl: start\n");
+    PDEBUG(debug_ioctl,"start");
     if( cmd ==  SIOCDEVLOADFW ){
 
-    	if( current->euid != 0 )	/* root only */
-	    return  -EPERM;
-    	if( (ndev->flags & IFF_UP) == IFF_UP )
-    	    return  -EBUSY;
+    	if( current->euid != 0 ){	/* root only */
+    		PDEBUG(debug_ioctl,"error - not root");	
+	        return  -EPERM;
+	}
+    	if( (ndev->flags & IFF_UP) == IFF_UP ){
+    		PDEBUG(debug_ioctl,"error - if is UP");		
+    		return  -EBUSY;
+	}
 	if( (error = verify_area( VERIFY_READ, ifr->ifr_data,
-     		sizeof(struct cx28975_fw) )) != 0 )
-	    return  error;
+     		sizeof(struct cx28975_fw) )) != 0 ){
+    		PDEBUG(debug_ioctl,"error - verify area for ifr");				
+    		return  error;
+	}
 
 	copy_from_user( &fw, ifr->ifr_data, sizeof fw );
 	if( (error = verify_area( VERIFY_READ, fw.firmw_image,
-			  fw.firmw_len )) != 0 )
-	    return  error;
-	if( !(firmw_image = vmalloc( fw.firmw_len )) )
-	    return  -ENOMEM;
+			  fw.firmw_len )) != 0 ){
+    		PDEBUG(debug_ioctl,"error - verify area for fw_image");
+		return  error;
+	}
+	if( !(firmw_image = vmalloc( fw.firmw_len )) ){
+		PDEBUG(debug_ioctl,"error - vmalloc");
+	        return  -ENOMEM;
+	}
 	copy_from_user( firmw_image, fw.firmw_image, fw.firmw_len );
-	if( download_firmware( ndev, fw.firmw_len, firmw_image ) )
-	    err=-1;
+	if( download_firmware( ndev, fw.firmw_len, firmw_image ) ){
+    		PDEBUG(debug_ioctl,"error - download_firmware");	
+		error=-EAGAIN;
+	}
 	vfree( firmw_image );
     }
-    PDEBUG(debug_ioctl,"ioctl: end\n");
+    PDEBUG(debug_ioctl,"end");
     return  error;
 }
 
@@ -595,15 +643,18 @@ hdlc_init( struct net_local *nl){
 static int
 shdsl_ready(struct net_local *nl, u8 expect)
 {
-    u8 ret_val=1;
-    u32 ret;
+        u8 ret_val=1;
+        u32 ret;
 	
-    ret=interruptible_sleep_on_timeout( &nl->wait_for_intr, HZ*10 );
-    if( ( nl->irqret & 0x1f) != expect )
-        ret_val=0;
+        ret=interruptible_sleep_on_timeout( &nl->wait_for_intr, HZ*10 );
+        if( ( nl->irqret & 0x1f) != expect ){
+    	        PDEBUG(debug_hw,"error: unexpected ack=%x, expect %x",
+			(nl->irqret & 0x1f),expect);    
+		ret_val=0;
+	}
 
-    nl->irqret=0;
-    return ret_val;
+        nl->irqret=0;
+	return ret_val;
 }
 
 static int
@@ -616,7 +667,7 @@ download_firmware( struct net_device  *ndev,u32 img_len, u8 *img )
 	int  i;
         u8   cksum = 0;
 	
-	PDEBUG(debug_hw,"start\n");
+	PDEBUG(debug_hw,"start");
 
         hdlc_shutdown(nl);
         udelay(10);
@@ -628,35 +679,48 @@ download_firmware( struct net_device  *ndev,u32 img_len, u8 *img )
 	udelay(10);
 	//---- prepare to download ----//
         if( !shdsl_ready(nl, _ACK_BOOT_WAKE_UP) ){
-		PDEBUG(debug_hw,"No ACK_BOOT_WAKE_UP\n");
+		PDEBUG(debug_hw,"No ACK_BOOT_WAKE_UP");
 	        return  -1;
 	}
 
 	for( i = 0;  i < img_len;  ++i )
     		cksum += img[i];
-	PDEBUG(debug_hw,"download: BOOT_UP\n");
+	PDEBUG(debug_hw,"download: BOOT_UP");
 	//---- download process ----//
         t = img_len;
-	if( issue_cx28975_cmd( nl, _DSL_DOWNLOAD_START, (u8 *) &t, 4 ) )
+	if( issue_cx28975_cmd( nl, _DSL_DOWNLOAD_START, (u8 *) &t, 4 ) ){
+		PDEBUG(debug_hw,"_DSL_DOWNLOAD_START error");	
     		return  -1;
+	}
+		
         for( i = 0;  img_len >= 75;  i += 75, img_len -= 75 ) {
-		if( issue_cx28975_cmd( nl, _DSL_DOWNLOAD_DATA, img + i, 75 ) )
+		if( issue_cx28975_cmd( nl, _DSL_DOWNLOAD_DATA, img + i, 75 ) ){
+			PDEBUG(debug_hw,"_DSL_DOWNLOAD_DATA error");	
 		        return  -1;
+		}
         }
 	if( img_len && 
-		issue_cx28975_cmd( nl, _DSL_DOWNLOAD_DATA, img + i, img_len ) )
+		issue_cx28975_cmd( nl, _DSL_DOWNLOAD_DATA, img + i, img_len ) ){
+		PDEBUG(debug_hw,"_DSL_DOWNLOAD_DATA tail error");	
 		return  -1;
+	}
         t = (cksum ^ 0xff) + 1;
-	if( issue_cx28975_cmd( nl, _DSL_DOWNLOAD_END, (u8 *) &t, 1 ) )
+	if( issue_cx28975_cmd( nl, _DSL_DOWNLOAD_END, (u8 *) &t, 1 ) ){
+		PDEBUG(debug_hw,"_DSL_DOWNLOAD_END error");	
 		return  -1;
+	}
 	//---- check that download is successfull ----//
         udelay(10);
-	if( !shdsl_ready(nl, _ACK_OPER_WAKE_UP) )
+	if( !shdsl_ready(nl, _ACK_OPER_WAKE_UP) ){
+		PDEBUG(debug_hw,"_ACK_OPER_WAKE_UP error");	
 		return -1;
+	}
 	//---- check that autorate selection supported ----//
         t=0;
-	if( issue_cx28975_cmd(nl,_DSL_VERSIONS,(u8*)&t,1) )
+	if( issue_cx28975_cmd(nl,_DSL_VERSIONS,(u8*)&t,1) ){
+		PDEBUG(debug_hw,"_DSL_VERSIONS error");	
 		return -1; 
+	}
     
 	if( *( (u8*)&(p->out_ack) + 4 ) & 1 ){
 		cfg->autob_en=0;
@@ -668,7 +732,7 @@ download_firmware( struct net_device  *ndev,u32 img_len, u8 *img )
 	// indicate that firmware is in the chip
 	cfg->fw_ok=1;
 
-	PDEBUG(debug_hw,"download: end\n");	
+	PDEBUG(debug_hw,"download: end");
         return  0;
 }
 
@@ -907,18 +971,35 @@ static void shdsl_link_chk( unsigned long data)
 	struct net_local  *nl  =(struct net_local *)ndev->priv;
 	volatile struct cx28975_cmdarea  *p = nl->cmdp;
 	struct timeval tv;
+	u8  cksum = 0;
 
 	// Link state    
         if( *((u8 *)p + 0x3c7) & 2 ) {
 		if( (*((u8 *)p + 0x3c0) & 0xc0) == 0x40 ){
 		// link up		
+
 			nl->regs->SR   = 0xff;		// clear it! 
 			nl->regs->CRB &= ~RXDE;
 			nl->regs->IMR = EXT | RXS | TXS | OFL | UFL;
 			++nl->in_stats.attempts;
 			do_gettimeofday( &tv );
 			nl->in_stats.last_time = tv.tv_sec;
-			netif_carrier_on( ndev );
+
+			//reset Rx FIFO
+		        p->in_dest = 0xf0;
+			p->in_opcode = _DSL_FR_RX_RESET;
+			p->in_zero = 0;
+			p->in_length = 0;
+			p->in_csum = (0xf0^_DSL_FR_RX_RESET^0^0xaa);
+			cksum ^= 0x8;
+			p->in_data[0] = 0x8;
+			p->in_datasum = cksum^0xaa;
+			p->out_ack = _ACK_NOT_COMPLETE;
+			p->intr_8051 = 0xfe;
+			
+			// tell os that link is up
+			netif_carrier_on( ndev );			
+		
 		} else	if( (*((u8 *)p + 0x3c0) & 0xc0) != 0x40 ){
 		//link down
 			nl->regs->CRB |= RXDE;
@@ -927,8 +1008,6 @@ static void shdsl_link_chk( unsigned long data)
 		}
         }
 }
-
-
 
 
 /* --------------------------------------------------------------------------

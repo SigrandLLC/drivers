@@ -19,6 +19,7 @@ _sg16fw_dload: sg16fw_dload.c
 all: sg16lan/sg16lan.o _sg16fw_dload
 
 install: sg16lan/sg16lan.o _sg16fw_dload sg16cfg
+	install -d $(MODULEPATH)
 	install -m 644 sg16lan/sg16lan.o $(MODULEPATH)
 	install -m 744 sg16cfg /sbin
 	install -s _sg16fw_dload /sbin	
