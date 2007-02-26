@@ -23,6 +23,7 @@
  *	26.11.2006 version 3.1 (fix building, fix interrupt handling) - Artem Polyakov
  *	30.12.2006 version 3.2 (backward port to 2.4.20 version) - Artem Polyakov 
  *	30.12.2006 version 3.2.6 (fix link up problem + new debug output) - Artem Polyakov 
+ *	26.02.2007 version 3.2.7 (fix sharing interrupt problem) - Artem Polyakov  
  */
  
 #include <linux/config.h>
