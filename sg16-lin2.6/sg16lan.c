@@ -405,6 +405,7 @@ sg16_interrupt( int  irq,  void  *dev_id,  struct pt_regs  *regs )
 
 	mask = ioread8((iotype)&(nl->regs->IMR));
 	iowrite8( 0, (iotype)&(nl->regs->IMR));
+	status= (status & mask);
 
 	if( status & EXT )
 	{
