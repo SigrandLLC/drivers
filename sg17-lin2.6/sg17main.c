@@ -315,12 +315,12 @@ sg17_link_support(struct sg17_sci *s)
 	int i;
 	int err;
 	
-	PDEBUG(0,"start");
+	PDEBUG(100,"start");
 	for( i=0;i<card->if_num;i++){
 		ndev = card->ndevs[i];
 		nl = (struct net_local *)netdev_priv(ndev);
 		if( nl->nsg_comp ){			
-			PDEBUG(0,"send ctrl pkt from if#%d",i);
+			PDEBUG(100,"send ctrl pkt from if#%d",i);
 			skb = dev_alloc_skb(ETH_ZLEN);
 			if( !skb ){
 				printk(KERN_INFO"%s: ENOMEM!!!!!!!!!!!!!!!!!!!!!",__FUNCTION__);
@@ -330,7 +330,7 @@ sg17_link_support(struct sg17_sci *s)
 			skb->data[0] = 0x01;
 			skb->data[1] = 0x3c;
     		        err = sg17_start_xmit(skb,ndev);
-			PDEBUG(0,"end with if#%d, ret=%d",i,err);
+			PDEBUG(100,"end with if#%d, ret=%d",i,err);
 		}
 	}
 }
@@ -673,10 +673,10 @@ sg17_def_config(struct sg17_card *card)
 	// ( REPEATER | TERMINATOR )
 	cfg_ch3->repeater = TERMINATOR;
 	// ( STARTUP_FAREND | STARTUP_LOCAL )
-	cfg_ch3->startup_initialization = STARTUP_LOCAL;
+	cfg_ch3->startup_initialization = STARTUP_FAREND;
 	// ( GHS_TRNS_00 | GHS_TRNS_01 | GHS_TRNS_11 | GHS_TRNS_10 )
 //	cfg_ch3->transaction = GHS_TRNS_10;
-	cfg_ch3->transaction = GHS_TRNS_10;
+	cfg_ch3->transaction = GHS_TRNS_00;
 	// ( ANNEX_A_B | ANNEX_A | ANNEX_B | ANNEX_G | ANNEX_F )
 	cfg_ch3->annex = ANNEX_A;
 	// ( SDI_TDMCLK_TDMMSP | SDI_DSL3 )

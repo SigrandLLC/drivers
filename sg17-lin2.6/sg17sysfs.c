@@ -46,10 +46,15 @@ store_mode( struct class_device *cdev,const char *buf, size_t size )
         if( (ndev->flags & IFF_UP) )
 		return size;
         if( size > 0 ){
-	if( buf[0] == '0' )
+	if( buf[0] == '0' ){
 	    cfg->mode = STU_R;
-	else if( buf[0] == '1' )
+	    cfg->startup_initialization = STARTUP_FAREND;
+	    cfg->transaction = GHS_TRNS_00;
+	}else if( buf[0] == '1' ){
 	    cfg->mode = STU_C;
+	    cfg->startup_initialization = STARTUP_LOCAL;
+	    cfg->transaction = GHS_TRNS_10;
+	}	    
     }    
     return size;
 }
