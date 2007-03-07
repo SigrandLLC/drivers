@@ -12,6 +12,7 @@ clean:
 	rm --preserve-root -f *.o*
 	rm --preserve-root -f *.ko
 	rm --preserve-root -f .*cmd	
+	rm --preserve-root -f *mod.c
 	rm --preserve-root -f .sg16*
 	rm --preserve-root -f -R .tmp*
 
