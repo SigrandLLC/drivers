@@ -1830,7 +1830,7 @@ store_stats(struct file *file,const char *buffer,unsigned long count,void *data)
     
     MOD_INC_USE_COUNT;    
 
-    if( !count || !data || (ndev->flags & IFF_UP) )
+    if( !count || !data )
 	goto ext;
     len= (count>PAGE_SIZE) ? PAGE_SIZE : count;
     if( copy_from_user(buff,buffer,len) )
@@ -1839,7 +1839,6 @@ store_stats(struct file *file,const char *buffer,unsigned long count,void *data)
     if( buff[0]=='1')
         shdsl_clr_stat(nl);
 
-    return len;
 ext:
     MOD_DEC_USE_COUNT;    
     return len;
@@ -1862,6 +1861,7 @@ store_maddr(struct file *file,const char *buffer,unsigned long count,void *data)
     if( !count || !data || (ndev->flags & IFF_UP) )
 	goto ext;
     len= (count>PAGE_SIZE) ? PAGE_SIZE : count;
+    
     if( copy_from_user(buff,buffer,len) )
 	goto ext;
 
@@ -1902,7 +1902,6 @@ show_hdlc_regs(char *page,char **start,off_t off,int count,int *eof,void *data)
     int len=0;
     
     MOD_INC_USE_COUNT;
-    
     len=snprintf(page,PAGE_SIZE,"CRA=%02x CRB=%02x SR=%02x IMR=%02x\nCRDR=%02x LRDR=%02x CTDR=%02x LTDR=%02x",
 		nl->regs->CRA,nl->regs->CRB,nl->regs->SR,nl->regs->IMR,
 		nl->regs->CRDR,nl->regs->LRDR,nl->regs->CTDR,nl->regs->LTDR);
@@ -1910,5 +1909,3 @@ show_hdlc_regs(char *page,char **start,off_t off,int count,int *eof,void *data)
     MOD_DEC_USE_COUNT;    
     return len;
 }
-
-
