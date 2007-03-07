@@ -602,6 +602,9 @@ mr16g_setup_carrier(struct net_device *ndev)
 			hdlc_set_carrier(0,ndev);
 			netif_carrier_off(ndev);			
 			netif_stop_queue(ndev);
+			// Common Control Register 4
+			// UOP0 = 1 to light up LED indicator			
+			ds2155_setreg(nl,CCR4,0x00);
 		}	
 	}else{
 		if( carrier ){
@@ -613,6 +616,9 @@ mr16g_setup_carrier(struct net_device *ndev)
     			hdlc_set_carrier(1,ndev);
 			netif_carrier_on(ndev);
 			netif_wake_queue(ndev);						
+			// Common Control Register 4
+			// UOP0 = 1 to light up LED indicator			
+			ds2155_setreg(nl,CCR4,0x01);
 		}
 		
 	}
@@ -998,9 +1004,6 @@ mr16g_E1_setup(struct net_local *nl)
 	ds2155_setreg(nl,CCR3,0x00);	// tmss-intdis-cttui-tdatfmt-tgpcken-rdatfmt-rgpcken
 	// INTDIS=1 to disable interrupts
 	
-	// Common Control Register 4
-	ds2155_setreg(nl,CCR4,0x01);
-	// UOP0 = 1 to light up LED indicator
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          	
 	// Line Interface Unit Registers
 	// Line Interface Control 1
