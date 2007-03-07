@@ -50,7 +50,7 @@
 
 #include "ds2155_regs.h"
 #include "sg_hdlc_ctrl.h"
-#define DEBUG_ON
+//#define DEBUG_ON
 #define DEFAULT_LEV 5
 #include "sg_debug.h"
 
@@ -595,6 +595,10 @@ mr16g_setup_carrier(struct net_device *ndev)
 
 	if( netif_carrier_ok(ndev) ){
 		if( !carrier ){
+			iowrite8( ioread8( (iotype)&(nl->hdlc_regs->CRB) ) | RXDE,
+		        	    (iotype)&(nl->hdlc_regs->CRB) );
+			iowrite8( EXT,(iotype)&(nl->hdlc_regs->IMR) );
+	                iowrite8( 0xff, (iotype)&(nl->hdlc_regs->SR) );
 			hdlc_set_carrier(0,ndev);
 			netif_carrier_off(ndev);			
 			netif_stop_queue(ndev);
@@ -605,7 +609,7 @@ mr16g_setup_carrier(struct net_device *ndev)
 		        	    (iotype)&(nl->hdlc_regs->CRB) );
 			iowrite8( EXT | UFL | OFL | RXS | TXS | CRC ,
 			            (iotype)&(nl->hdlc_regs->IMR) );
-	                iowrite8( CRC, (iotype)&(nl->hdlc_regs->SR) );
+	                iowrite8( 0xff, (iotype)&(nl->hdlc_regs->SR) );
     			hdlc_set_carrier(1,ndev);
 			netif_carrier_on(ndev);
 			netif_wake_queue(ndev);						

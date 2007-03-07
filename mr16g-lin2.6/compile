@@ -1,9 +1,11 @@
 #!/bin/bash
 
 #CROSS_COMPILE_PATH=/buildroot/build_mipsel/staging_dir/bin
-BASE_PATH=/home/artpol/router/OpenWrt/
+BASE_PATH=/home/artpol/router/OpenWrt/openwrt-midge/
 CROSS_COMPILE_PATH=${BASE_PATH}/staging_dir_mipsel/bin
 export PATH=$CROSS_COMPILE_PATH:$PATH
 make clean
 make  CROSS_COMPILE=mipsel-linux- 2>&1
+
+
 

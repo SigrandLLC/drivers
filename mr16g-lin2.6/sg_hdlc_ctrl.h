@@ -52,7 +52,7 @@
 
 // Portability 
 #define iotype void*
-#define IO_READ_WRITE
+//#define IO_READ_WRITE
 #ifndef IO_READ_WRITE
 #       define iowrite8(val,addr)  writeb(val,addr)
 #       define iowrite32(val,addr)  writel(val,addr)
