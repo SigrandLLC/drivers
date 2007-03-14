@@ -59,7 +59,7 @@ sg17_sci_init( struct sg17_sci *s,char *card_name,struct sdfe4 *hwdev)
 	s->ch_map[0] = 0;
 	s->ch_map[3] = 1;
 	
-	spin_lock_init(&s->xlock);
+	spin_lock_init(&s->chip_lock);
 	init_waitqueue_head( &s->wait_q );
 	s->hwdev = hwdev;
 	INIT_WORK( &s->wqueue, sg17_sci_monitor,(void*)s);
@@ -225,12 +225,10 @@ int sg17_sci_xmit( struct sg17_sci *s, char *msg, int len)
 	if( tmp & TXEN )
 		return -EAGAIN;
 	
-	spin_lock_irqsave(&s->xlock,flags);
 	for( i=0; i<len; i++)
 		iowrite8( msg[i],(u8*)s->tx_buf + i);
 	iowrite16( len, &s->regs->TXLEN);
 	iowrite8( (ioread8(&s->regs->CRA) | TXEN ), &s->regs->CRA);
-	spin_unlock_irqrestore(&s->xlock,flags);	
 	
 	return 0;
 }
@@ -334,3 +332,20 @@ sdfe4_link_led_fast_blink(int i,struct sdfe4 *hwdev){
 }
 
 inline void sdfe4_clear_channel(struct sdfe4 *hwdev) {}
+
+
+inline void
+sdfe4_memcpy(void *dst,const void *src,int size){	
+	memcpy(dst,src,size);
+}
+
+inline void
+sdfe4_lock_chip(struct sdfe4 *hwdev){
+	struct sg17_sci *s = (struct sg17_sci *)hwdev->data;
+	spin_lock(&s->chip_lock);
+}
+inline void
+sdfe4_unlock_chip(struct sdfe4 *hwdev){
+	struct sg17_sci *s = (struct sg17_sci *)hwdev->data;
+	spin_unlock(&s->chip_lock);
+}

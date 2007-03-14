@@ -135,6 +135,7 @@
 #define  CMD_CFG_MULTIWIRE_SLAVE     0xB41F
 #define  CMD_CFG_DSL_PARAM           0x4402
 #define  CMD_PERF_STATUS_GET         0x9432
+#define  ACK_PERF_STATUS_GET         0x9632
 #define  ACK_CFG_MULTIWIRE_SDATA     0xB63F
 
 #define  NFC_CONNECT_CTRL		0x0D04
@@ -400,6 +401,21 @@ struct ack_dsl_param_get {
 	u8 bits_p_symbol;
 };
 
+struct ack_perf_status_get {
+	u8 SNR_Margin_dB;
+	u8 LoopAttenuation_dB;
+	u8 ES_count;
+	u8 SES_count;
+	u16 CRC_Anomaly_count;
+	u8 LOSWS_count;
+	u8 UAS_Count;
+	u16 SegmentAnomaly_Count;
+	u8 SegmentDefectS_Count;
+	u8 CounterOverflowInd;
+	u8 CounterResetInd;
+};
+
+
 u32 u8_to_u32(u8 *src);
 int sdfe4_msg_init(struct sdfe4_msg *msg, char *cmsg, int len);
 int sdfe4_chk_transplayer(u8 *msg);
@@ -427,6 +443,7 @@ int sdfe4_setup_channel(int ch, struct sdfe4 *hwdev);
 int sdfe4_start_channel(int ch, struct sdfe4 *hwdev);
 int sdfe4_start_chip(struct sdfe4 *hwdev);
 int sdfe4_state_mon(struct sdfe4 *hwdev);
+int sdfe4_get_statistic(u8 ch, struct sdfe4 *hwdev,struct sdfe4_stat *stat);
 int sdfe4_start_as_modem(struct sdfe4 *hwdev);
 
 #ifdef SG17_REPEATER

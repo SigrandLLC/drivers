@@ -215,8 +215,9 @@ sdfe4_pamdsl_cmd(u8 ch, u16 opcd, u8 *params, u16 plen,struct sdfe4_msg *rmsg,st
 	u8 buf[SDFE4_FIFO8];
 	u8 *msg8=(u8*)buf;
 	int i;
+	int error = 0;
 
-	rmsg->len=0;
+	rmsg->len = 0;
 
 	// prepare parameters of message
 	msg8[0] = PEF24624_ADR_HOST;
@@ -233,7 +234,8 @@ sdfe4_pamdsl_cmd(u8 ch, u16 opcd, u8 *params, u16 plen,struct sdfe4_msg *rmsg,st
 
 	// clean channel
 //	sdfe4_clear_channel(rmsg,hwdev);
-
+	
+	sdfe4_lock_chip(hwdev);
 #ifdef SG17_REPEATER
 	i=0;
 	do{
@@ -241,27 +243,36 @@ sdfe4_pamdsl_cmd(u8 ch, u16 opcd, u8 *params, u16 plen,struct sdfe4_msg *rmsg,st
 		msg8[2] = 0x08 | ( hwdev->msg_cntr & 0x1);
 		if( sdfe4_hdlc_xmit(msg8,EMB_CMDHDR_SZ+plen,hwdev) ){
 		// TODO: error handling
-			return -EXMIT;
+			error = -EXMIT;
+			goto exit;
 		}
 		
 #ifdef SG17_REPEATER
-		if( i == 3 )
-			return -ERESET;
+		if( i == 3 ){
+			error = -ERESET;
+			goto exit;
+		}
 		i++;
 	}
 	while( sdfe4_drv_poll(rmsg,hwdev) );
 #else	
 
-	if( sdfe4_hdlc_wait_intr(15000,hwdev) )
-		return -1;
-
+	if( sdfe4_hdlc_wait_intr(15000,hwdev) ){
+		error = -1;
+		goto exit;
+	}
+	
 	i = sdfe4_hdlc_recv(rmsg->buf,&rmsg->len,hwdev);
 #endif	
 		
-	if( rmsg->ack_id != *(u16*)(&rmsg->buf[4]))
-		return -1;
-		
-	return 0;
+	if( rmsg->ack_id != *(u16*)(&rmsg->buf[4])){
+		error = -1;
+		goto exit;
+	}
+
+exit:		
+	sdfe4_unlock_chip(hwdev);
+	return error;
 }
 
 /*
@@ -905,6 +916,37 @@ sdfe4_load_config(u8 ch, struct sdfe4 *hwdev)
 	PDEBUG(debug_error,"rate = %d",ch_cfg->rate);	
 	return 0;
 }
+
+int
+sdfe4_get_statistic(u8 ch, struct sdfe4 *hwdev,struct sdfe4_stat *stat)
+{
+  	struct sdfe4_msg rmsg;
+	struct ack_dsl_param_get *dsl_par;
+	struct ack_perf_status_get *perf;	
+	struct sdfe4_if_cfg *ch_cfg=&(hwdev->cfg[ch]);
+	int r;
+	
+/*
+        rmsg.ack_id=ACK_DSL_PARAM_GET;
+	if( (r = sdfe4_pamdsl_cmd(ch,CMD_DSL_PARAM_GET,NULL,0,&rmsg,hwdev)) ){
+		PDEBUG(debug_error,"error(%d) in CMD_DSL_PARAM_GET",r);
+		return -1;
+	}
+	dsl_par = (struct ack_dsl_param_get *)&(rmsg.buf[8]);
+*/	
+	wait_ms(10);
+
+        rmsg.ack_id=ACK_PERF_STATUS_GET;
+	if( (r = sdfe4_pamdsl_cmd(ch,CMD_PERF_STATUS_GET,NULL,0,&rmsg,hwdev)) ){
+		PDEBUG(debug_error,"error(%d) in CMD_DSL_PARAM_GET",r);
+		return -1;
+	}
+	perf = (struct ack_perf_status_get*)&(rmsg.buf[8]);
+	sdfe4_memcpy(stat,perf,sizeof(*perf));
+	return 0;
+}
+
+
 
 /*
  * sdfe4_load_config:

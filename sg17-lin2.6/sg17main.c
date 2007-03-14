@@ -959,6 +959,7 @@ sg17_remove_one(struct pci_dev *pdev)
 
 int __devinit
 sg17_init( void ){
+	printk(KERN_NOTICE"Sigrand SG-17PCI driver\n");
 	int i = pci_register_driver( &sg17_driver );
 	PDEBUG(10,"return = %d",i);
 	return 0;
@@ -966,6 +967,7 @@ sg17_init( void ){
 
 void __devexit
 sg17_exit( void ){
+	printk(KERN_NOTICE"UNLOAD Sigrand SG-17PCI driver\n");
         pci_unregister_driver( &sg17_driver );
 }
 

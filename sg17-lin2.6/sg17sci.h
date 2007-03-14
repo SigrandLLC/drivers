@@ -26,7 +26,7 @@ struct sg17_sci{
 	struct sdfe4 *hwdev;	
 	struct work_struct wqueue;
 	// locking
-	spinlock_t xlock;
+	spinlock_t chip_lock;
 	// channel to if mapping
 	u8 ch_map[SG17_IF_MAX];
         // statistics

@@ -478,6 +478,45 @@ store_maddr( struct class_device *cdev,const char *buf, size_t size )
 }
 static CLASS_DEVICE_ATTR(maddr, 0200 ,NULL,store_maddr);
 
+// ------------------------- Statistics ------------------------------- //
+// PCI write burst
+static ssize_t
+show_statistics(struct class_device *cdev, char *buf) 
+{
+	struct net_device *ndev = to_net_dev(cdev);    
+        struct net_local *nl=(struct net_local *)netdev_priv(ndev);
+	struct sg17_card  *card = (struct sg17_card  *)dev_get_drvdata( nl->dev );
+        struct sg17_sci *s = (struct sg17_sci *)&card->sci;
+	struct sdfe4_stat statistic, *stat=&statistic;
+	
+	if( sdfe4_get_statistic(nl->number,s->hwdev,stat) )
+    		return snprintf(buf,PAGE_SIZE,"Error Getting statistic");
+	return snprintf(buf,PAGE_SIZE,"SNR_Marg(%u), LoopAtten(%u), ES_count(%u), SES_Count(%u)\n"
+				"CRC_Anom_count(%u), LOSWS_count(%u), UAS_count(%u), SegAnomaly_Count(%u)\n"
+				"SegDeffect_count(%u), CounterOverfInd(%u), CounterResetInd(%u)\n",
+			        stat->SNR_Margin_dB,stat->LoopAttenuation_dB,stat->ES_count,stat->SES_count,
+				stat->CRC_Anomaly_count,stat->LOSWS_count,stat->UAS_Count,stat->SegmentAnomaly_Count,
+			        stat->SegmentDefectS_Count,stat->CounterOverflowInd,stat->CounterResetInd );
+												
+}
+
+static ssize_t
+store_statistics( struct class_device *cdev,const char *buf, size_t size ) 
+{
+        struct net_device *ndev = to_net_dev(cdev);
+	struct net_local *nl = netdev_priv(ndev);
+        struct hdlc_config *cfg=&(nl->hdlc_cfg);
+	u8 cfg_bt;
+
+        if( !size )	return 0;
+
+	switch(buf[0] == '1'){
+        }	
+        return size;	
+}
+static CLASS_DEVICE_ATTR(statistics,0644,show_statistics,store_statistics);
+
+
 // ------------------------- Compatibility ------------------------------- //
 // NSGate compatibility
 static ssize_t
@@ -598,6 +637,8 @@ static struct attribute *sg17_attr[] = {
         &class_device_attr_wburst.attr,
 	// net device
 	&class_device_attr_maddr.attr,
+	// statistics
+	&class_device_attr_statistics.attr,
 	// compatibility
 	&class_device_attr_nsg_comp.attr,	
         // debug

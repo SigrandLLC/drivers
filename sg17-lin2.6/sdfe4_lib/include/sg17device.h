@@ -13,11 +13,20 @@
 #define SG17_DEVICE_H
 
 #include "sg17config.h"
+#include "sg17hw.h"
 
-#ifdef SG17_PCI_MODULE
-#include "sg17_pci_module.h"
-#else
-#include "sg17_repeater.h"
-#endif
+int sdfe4_hdlc_xmit(u8 *msg,u16 len,struct sdfe4 *hwdev);
+int sdfe4_hdlc_wait_intr(int to,struct sdfe4 *hwdev);
+int sdfe4_hdlc_recv(u8 *buf,int *len,struct sdfe4 *hwdev);
+void sdfe4_clear_channel(struct sdfe4 *hwdev);
+void wait_ms(int x);
+void sdfe4_memcpy(void *,const void *,int size);
+int sdfe4_link_led_up(int i,struct sdfe4 *hwdev);
+int sdfe4_link_led_down(int i,struct sdfe4 *hwdev);
+int sdfe4_link_led_blink(int i, struct sdfe4 *hwdev);
+int sdfe4_link_led_fast_blink(int i,struct sdfe4 *hwdev);
+// locking
+void sdfe4_lock_chip(struct sdfe4 *hwdev);
+void sdfe4_unlock_chip(struct sdfe4 *hwdev);
 
 #endif
