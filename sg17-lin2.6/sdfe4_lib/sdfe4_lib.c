@@ -234,21 +234,25 @@ sdfe4_pamdsl_cmd(u8 ch, u16 opcd, u8 *params, u16 plen,struct sdfe4_msg *rmsg,st
 
 	// clean channel
 //	sdfe4_clear_channel(rmsg,hwdev);
-	
+
+	PDEBUG(0,"try to lock");		
 	sdfe4_lock_chip(hwdev);
+	PDEBUG(0,"chip locked");	
 #ifdef SG17_REPEATER
 	i=0;
 	do{
 #endif	
 		msg8[2] = 0x08 | ( hwdev->msg_cntr & 0x1);
-		if( sdfe4_hdlc_xmit(msg8,EMB_CMDHDR_SZ+plen,hwdev) ){
+		if( (error=sdfe4_hdlc_xmit(msg8,EMB_CMDHDR_SZ+plen,hwdev)) ){
 		// TODO: error handling
+			PDEBUG(debug_error,"err(%d) in sdfe4_hdlc_xmit",error);
 			error = -EXMIT;
 			goto exit;
 		}
 		
 #ifdef SG17_REPEATER
 		if( i == 3 ){
+			PDEBUG(debug_error,"error no answer");		
 			error = -ERESET;
 			goto exit;
 		}
@@ -257,7 +261,8 @@ sdfe4_pamdsl_cmd(u8 ch, u16 opcd, u8 *params, u16 plen,struct sdfe4_msg *rmsg,st
 	while( sdfe4_drv_poll(rmsg,hwdev) );
 #else	
 
-	if( sdfe4_hdlc_wait_intr(15000,hwdev) ){
+	if( (error=sdfe4_hdlc_wait_intr(15000,hwdev)) ){
+		PDEBUG(debug_error,"err(%d) no intr",error);	
 		error = -1;
 		goto exit;
 	}
@@ -272,6 +277,7 @@ sdfe4_pamdsl_cmd(u8 ch, u16 opcd, u8 *params, u16 plen,struct sdfe4_msg *rmsg,st
 
 exit:		
 	sdfe4_unlock_chip(hwdev);
+	PDEBUG(0,"chip unlocked");
 	return error;
 }
 
@@ -335,6 +341,7 @@ sdfe4_pamdsl_nfc(struct sdfe4_msg *msg,struct sdfe4 *hwdev)
 		return 0;
 	case NFC_SDI_DPLL_SYNC:
 		hwdev->ch[ch].sdi_dpll_sync=1;
+		PDEBUG(0,"sdi_dpll_sync=1");
 		return 0;
 	case NFC_PERF_PRIM:
 		hwdev->ch[ch].perf_prims=msg->buf[EMB_NFCHDR_SZ];
@@ -851,7 +858,6 @@ sdfe4_disable_channel(int ch,struct sdfe4 *hwdev)
      	struct sdfe4_msg rmsg;
 	u8 main_init[3]={MAIN_INIT,0x0,0x0};	
 	wait_ms(50);
-	PDEBUG(0,"CMD_CONNECT_CTRL ch#%d",ch);		
 	rmsg.ack_id=ACK_CONNECT_CTRL;
 	if(sdfe4_pamdsl_cmd(ch,CMD_CONNECT_CTRL,main_init,3,&rmsg,hwdev))
 		return -1;
@@ -904,7 +910,7 @@ sdfe4_load_config(u8 ch, struct sdfe4 *hwdev)
 		return -1;
 	}
 	dsl_par=(struct ack_dsl_param_get *)&(rmsg.buf[8]);
-	PDEBUG(debug_error,"Get return");	
+	PDEBUG(debug_sdfe4,"Get return");	
 	if(dsl_par->bits_p_symbol >= 0x04){
 		TC_PAM =TCPAM32;
 	}else{
@@ -913,7 +919,7 @@ sdfe4_load_config(u8 ch, struct sdfe4 *hwdev)
 	ch_cfg->annex = dsl_par->annex;
 	ch_cfg->tc_pam = TC_PAM;
 	ch_cfg->rate = dsl_par->base_rate;
-	PDEBUG(debug_error,"rate = %d",ch_cfg->rate);	
+	PDEBUG(debug_sdfe4,"rate = %d",ch_cfg->rate);	
 	return 0;
 }
 
@@ -976,7 +982,6 @@ sdfe4_state_mon(struct sdfe4 *hwdev)
 				sdfe4_link_led_fast_blink(i,hwdev);
 				break;
 			case MAIN_INIT:
-				PDEBUG(0,"MAIN_INIT #%d",i);
 				sdfe4_link_led_down(i,hwdev);
 				sdfe4_reset_hwdev_chan(&(hwdev->ch[i]));
     				if( sdfe4_setup_channel(i,hwdev) )
@@ -1013,7 +1018,6 @@ sdfe4_state_mon(struct sdfe4 *hwdev)
 		}
 
 		if(cfg->need_reconf){
-			PDEBUG(0,"start reconfig ch#%d",i);
 			sdfe4_disable_channel(i,hwdev);
 			sdfe4_link_led_down(i,hwdev);
 			sdfe4_reset_hwdev_chan(&(hwdev->ch[i]));			

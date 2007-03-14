@@ -143,7 +143,6 @@ store_rate( struct class_device *cdev,const char *buf, size_t size )
         char *endp;
 	u16 tmp;
 	
-	PDEBUG(0,"start");
         // check parameters
 	if( (ndev->flags & IFF_UP) || !size)
 		return size;
@@ -154,7 +153,6 @@ store_rate( struct class_device *cdev,const char *buf, size_t size )
 		return size;
 
         cfg->rate=tmp;
-	PDEBUG(0,"rate = %d",cfg->rate);	
         return size;
 }
 static CLASS_DEVICE_ATTR(rate, 0644 ,show_rate,store_rate);
@@ -550,6 +548,23 @@ static CLASS_DEVICE_ATTR(nsg_comp, 0644 ,show_nsg_comp,store_nsg_comp);
 
 // ------------------------- DEBUG ---------------------------------------- //
 
+// debug_verbosity
+static ssize_t
+store_debug_on( struct class_device *cdev,const char *buf, size_t size ) 
+{
+        struct net_device *ndev = to_net_dev(cdev);
+	struct net_local *nl = netdev_priv(ndev);
+        // if interface is up 
+        if( !size )	return size;
+        if( buf[0] == '1' )
+                debug_link=0;
+	else
+		debug_link=40;
+        return size;
+}
+static CLASS_DEVICE_ATTR(debug_on, 0200 ,NULL,store_debug_on);
+
+
 // hdlc registers
 static ssize_t
 show_sg17_regs(struct class_device *cdev, char *buf) 
@@ -642,6 +657,7 @@ static struct attribute *sg17_attr[] = {
 	// compatibility
 	&class_device_attr_nsg_comp.attr,	
         // debug
+	&class_device_attr_debug_on.attr,	
 	&class_device_attr_regs.attr,
 	&class_device_attr_loopback.attr,
 	&class_device_attr_xmit_tst.attr,

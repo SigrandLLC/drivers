@@ -16,6 +16,19 @@
 #include "sdfe4_lib/include/sdfe4_lib.h"
 #include <linux/netdevice.h>
 
+// Portability 
+#define iotype void*
+//#define IO_READ_WRITE
+#ifndef IO_READ_WRITE
+#       define iowrite8(val,addr)  writeb(val,addr)
+#       define iowrite16(val,addr)  writeb(val,addr)
+#       define iowrite32(val,addr)  writel(val,addr)
+#       define ioread8(addr) readb(addr)
+#       define ioread16(addr) readb(addr)
+#       define ioread32(addr) readl(addr)
+#endif
+
+
 //--- SG-17PCI Card control ----//
 struct sg17_card{
 	int number;
@@ -70,4 +83,3 @@ void sg17_link_support(struct sg17_sci *s);
 
 
 #endif
-
