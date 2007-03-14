@@ -208,11 +208,13 @@ static struct pci_driver  mr16g_driver = {
 static int
 mr16g_init( void )
 {
+	printk(KERN_NOTICE"Sigrand MR-16G E1 driver\n");
 	return pci_module_init( &mr16g_driver );
 }
 
 static void
 mr16g_exit( void ){
+	printk(KERN_NOTICE"Sigrand MR-16G E1 driver Unload\n");
 	pci_unregister_driver( &mr16g_driver );
 }
 
@@ -230,7 +232,6 @@ mr16g_init_one( struct pci_dev *pdev,const struct pci_device_id *ent )
         struct net_device *ndev = NULL;
 	
 	PDEBUG(2,"start");
-	printk(KERN_NOTICE"%s: start\n",__FUNCTION__);
         if( pci_enable_device( pdev ) )
 	        return -EIO;
 	pci_set_master(pdev);
@@ -262,7 +263,6 @@ mr16g_init_one( struct pci_dev *pdev,const struct pci_device_id *ent )
 		
 	// Init control through sysfs
 	nl->dev = dev_dev;
-	printk(KERN_NOTICE"%s: start\n",__FUNCTION__);	
 	if( (err = sysfs_create_link( &(dev_drv->kobj),&(dev_dev->kobj),ndev->name )) ){
 		printk(KERN_NOTICE"%s: error in sysfs_create_link\n",__FUNCTION__);	
 		goto err3;
