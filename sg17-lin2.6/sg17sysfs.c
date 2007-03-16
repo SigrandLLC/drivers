@@ -487,7 +487,7 @@ show_statistics(struct class_device *cdev, char *buf)
         struct sg17_sci *s = (struct sg17_sci *)&card->sci;
 	struct sdfe4_stat statistic, *stat=&statistic;
 	
-	if( sdfe4_get_statistic(nl->number,s->hwdev,stat) )
+	if( sdfe4_get_statistic(sg17_sci_if2ch(s,nl->number),s->hwdev,stat) )
     		return snprintf(buf,PAGE_SIZE,"Error Getting statistic");
 	return snprintf(buf,PAGE_SIZE,"SNR_Marg(%u), LoopAtten(%u), ES_count(%u), SES_Count(%u)\n"
 				"CRC_Anom_count(%u), LOSWS_count(%u), UAS_count(%u), SegAnomaly_Count(%u)\n"
