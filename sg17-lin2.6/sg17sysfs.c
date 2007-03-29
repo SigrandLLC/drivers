@@ -7,7 +7,7 @@
 #include <linux/netdevice.h>
 #include <linux/etherdevice.h>
 
-#include "sdfe4_lib/include/sdfe4_lib.h"
+#include "include/sdfe4_lib.h"
 #include "sg17lan.h"
 
 // Debug parameters
@@ -489,7 +489,7 @@ show_statistics(struct class_device *cdev, char *buf)
 	
 	if( sdfe4_get_statistic(sg17_sci_if2ch(s,nl->number),s->hwdev,stat) )
     		return snprintf(buf,PAGE_SIZE,"Error Getting statistic");
-	return snprintf(buf,PAGE_SIZE,"SNR_Marg(%u), LoopAtten(%u), ES_count(%u), SES_Count(%u)\n"
+	return snprintf(buf,PAGE_SIZE,"SNR_Marg(%d), LoopAtten(%d), ES_count(%u), SES_Count(%u)\n"
 				"CRC_Anom_count(%u), LOSWS_count(%u), UAS_count(%u), SegAnomaly_Count(%u)\n"
 				"SegDeffect_count(%u), CounterOverfInd(%u), CounterResetInd(%u)\n",
 			        stat->SNR_Margin_dB,stat->LoopAttenuation_dB,stat->ES_count,stat->SES_count,
@@ -501,10 +501,9 @@ show_statistics(struct class_device *cdev, char *buf)
 static ssize_t
 store_statistics( struct class_device *cdev,const char *buf, size_t size ) 
 {
-        struct net_device *ndev = to_net_dev(cdev);
-	struct net_local *nl = netdev_priv(ndev);
-        struct hdlc_config *cfg=&(nl->hdlc_cfg);
-	u8 cfg_bt;
+//        struct net_device *ndev = to_net_dev(cdev);
+//	struct net_local *nl = netdev_priv(ndev);
+//	struct hdlc_config *cfg=&(nl->hdlc_cfg);
 
         if( !size )	return 0;
 
@@ -552,8 +551,8 @@ static CLASS_DEVICE_ATTR(nsg_comp, 0644 ,show_nsg_comp,store_nsg_comp);
 static ssize_t
 store_debug_on( struct class_device *cdev,const char *buf, size_t size ) 
 {
-        struct net_device *ndev = to_net_dev(cdev);
-	struct net_local *nl = netdev_priv(ndev);
+//        struct net_device *ndev = to_net_dev(cdev);
+//	struct net_local *nl = netdev_priv(ndev);
         // if interface is up 
         if( !size )	return size;
         if( buf[0] == '1' )

@@ -6,5 +6,5 @@ int debug_init=40;
 int debug_sdfe4=40;
 int debug_cur=50;
 int debug_netcard=40;
-int debug_link=10;
+int debug_link=40;
 int debug_error=0;

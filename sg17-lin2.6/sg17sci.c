@@ -30,8 +30,8 @@
 //---- Local includes ----//
 #include "sg17sci.h"
 #include "sg17lan.h"
-#include "sdfe4_lib/include/sg17hw.h"
-#include "sdfe4_lib/include/sdfe4_lib.h"
+#include "include/sg17hw.h"
+#include "include/sdfe4_lib.h"
 // Debug parameters
 #define DEBUG_ON
 #define DEFAULT_LEV 20
@@ -215,7 +215,6 @@ sg17_sci_recv( struct sg17_sci *s, char *msg, int *mlen)
 int sg17_sci_xmit( struct sg17_sci *s, char *msg, int len)
 {
 	int i;
-	unsigned long flags;
 	u8 tmp = ioread8(&s->regs->CRA);
 	// message is too long
 	if( len > SCI_BUFF_SIZE )

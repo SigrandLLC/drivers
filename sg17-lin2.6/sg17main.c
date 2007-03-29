@@ -52,9 +52,9 @@
 
 
 #include "sg17sci.h"
-#include "sdfe4_lib/include/sg17hw.h"
-#include "sdfe4_lib/include/sdfe4_lib.h"
-#include "sdfe4_lib/include/sg17device.h"
+#include "include/sg17hw.h"
+#include "include/sdfe4_lib.h"
+#include "include/sg17device.h"
 #include "sg17main.h"
 
 // Debug parameters
@@ -417,8 +417,8 @@ sg17_start_xmit( struct sk_buff *skb, struct net_device *ndev )
 		PDEBUG(debug_xmit,"error: cannot add skb - full queue");
 		spin_unlock_irqrestore(&nl->tx.lock,flags);
     		netif_stop_queue( ndev );
-		dev_kfree_skb_any( skb );
-		return 0;
+//		dev_kfree_skb_any( skb );
+		return 1;
 	}
 	nl->stats.tx_packets++;
         nl->stats.tx_bytes += skb->len;
@@ -959,8 +959,8 @@ sg17_remove_one(struct pci_dev *pdev)
 
 int __devinit
 sg17_init( void ){
-	printk(KERN_NOTICE"Sigrand SG-17PCI driver\n");
 	int i = pci_register_driver( &sg17_driver );
+	printk(KERN_NOTICE"Sigrand SG-17PCI driver\n");	
 	PDEBUG(10,"return = %d",i);
 	return 0;
 }

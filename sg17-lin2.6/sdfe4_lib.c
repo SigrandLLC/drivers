@@ -16,7 +16,7 @@
 #include "include/sdfe4_lib.h"
 #define DEBUG_ON
 #define DEFAULT_LEV 20
-#include "../sg17debug.h"
+#include "sg17debug.h"
 
 inline u32
 u8_to_u32(u8 *src)
@@ -927,19 +927,11 @@ int
 sdfe4_get_statistic(u8 ch, struct sdfe4 *hwdev,struct sdfe4_stat *stat)
 {
   	struct sdfe4_msg rmsg;
-	struct ack_dsl_param_get *dsl_par;
-	struct ack_perf_status_get *perf;	
-	struct sdfe4_if_cfg *ch_cfg=&(hwdev->cfg[ch]);
+	struct ack_perf_status_get *perf;
+//	struct ack_dsl_param_get *dsl_par;		
+//	struct sdfe4_if_cfg *ch_cfg=&(hwdev->cfg[ch]);
 	int r;
 	
-/*
-        rmsg.ack_id=ACK_DSL_PARAM_GET;
-	if( (r = sdfe4_pamdsl_cmd(ch,CMD_DSL_PARAM_GET,NULL,0,&rmsg,hwdev)) ){
-		PDEBUG(debug_error,"error(%d) in CMD_DSL_PARAM_GET",r);
-		return -1;
-	}
-	dsl_par = (struct ack_dsl_param_get *)&(rmsg.buf[8]);
-*/	
 	wait_ms(10);
 
         rmsg.ack_id=ACK_PERF_STATUS_GET;

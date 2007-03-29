@@ -1,6 +1,7 @@
 #!/bin/bash
 
-CROSS_COMPILE_PATH=/home/artpol/router/OpenWrt/openwrt-midge/staging_dir_mipsel/bin/
+CROSS_COMPILE_PATH=/home/artpol/router/OpenWrt/r544/openwrt-midge/staging_dir_mipsel/bin/
 export PATH=$CROSS_COMPILE_PATH:$PATH
 make clean
 make
+

@@ -12,8 +12,8 @@
 
 #include "sg17ring.h"
 #include "sg17sci.h"
-#include "sdfe4_lib/include/sg17hw.h"
-#include "sdfe4_lib/include/sdfe4_lib.h"
+#include "include/sg17hw.h"
+#include "include/sdfe4_lib.h"
 #include <linux/netdevice.h>
 
 // Portability 

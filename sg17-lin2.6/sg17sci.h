@@ -8,7 +8,7 @@
 #include <linux/wait.h>
 #include <linux/interrupt.h>
 
-#include "sdfe4_lib/include/sg17hw.h"
+#include "include/sg17hw.h"
 
 struct sg17_sci_regs{
 	u8 __iomem CRA,CRB,SR,IMR;

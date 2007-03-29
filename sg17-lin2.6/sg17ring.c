@@ -25,7 +25,7 @@ sg_ring_dec(u8 ind,int mask){
 int
 sg_ring_have_space(struct sg_ring *r)
 {
-	unsigned long flags;
+//	unsigned long flags;
 	int ret=1;
 
 	PDEBUG(0," %s ring, sci:CRA=%02x", (r->type==TX_RING) ? "TX" : "RX",SCI->regs->CRA);
