@@ -181,9 +181,6 @@ sdfe4_aux_cmd(u8 opcode, u8 param_1,struct sdfe4_ret *ret,struct sdfe4 *hwdev)
 	if( sdfe4_hdlc_xmit(msg8,AUX_CMDHDR_SZ+1,hwdev) )
 		return -1;
 
-	// TODO : replase with dev specific
-	wait_ms(2);
-
 	if( sdfe4_hdlc_wait_intr(15000,hwdev) )
 		return -1;
 
