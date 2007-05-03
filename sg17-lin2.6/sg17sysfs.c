@@ -11,7 +11,7 @@
 #include "sg17lan.h"
 
 // Debug parameters
-#define DEBUG_ON
+//#define DEBUG_ON
 #define DEFAULT_LEV 20
 #include "sg17debug.h"
 

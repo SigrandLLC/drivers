@@ -14,7 +14,7 @@
 
 #include "include/sg17device.h"
 #include "include/sdfe4_lib.h"
-#define DEBUG_ON
+//#define DEBUG_ON
 #define DEFAULT_LEV 20
 #include "sg17debug.h"
 
