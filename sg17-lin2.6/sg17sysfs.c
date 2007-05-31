@@ -491,7 +491,7 @@ show_statistics(struct class_device *cdev, char *buf)
     		return snprintf(buf,PAGE_SIZE,"Error Getting statistic");
 	return snprintf(buf,PAGE_SIZE,"SNR_Marg(%d), LoopAtten(%d), ES_count(%u), SES_Count(%u)\n"
 				"CRC_Anom_count(%u), LOSWS_count(%u), UAS_count(%u), SegAnomaly_Count(%u)\n"
-				"SegDeffect_count(%u), CounterOverfInd(%u), CounterResetInd(%u)\n",
+				"SegDefect_count(%u), CounterOverfInd(%u), CounterResetInd(%u)\n",
 			        stat->SNR_Margin_dB,stat->LoopAttenuation_dB,stat->ES_count,stat->SES_count,
 				stat->CRC_Anomaly_count,stat->LOSWS_count,stat->UAS_Count,stat->SegmentAnomaly_Count,
 			        stat->SegmentDefectS_Count,stat->CounterOverflowInd,stat->CounterResetInd );

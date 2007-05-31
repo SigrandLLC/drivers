@@ -567,7 +567,7 @@ sg17_tranceiver_up( struct net_local *nl)
  * -------------------------------------------------------------------------- */
  
  
-#ifdef DEBUG_ON
+//#ifdef DEBUG_ON
 
 //-----------   DEBUG ------------------//
 
@@ -649,7 +649,7 @@ sg17_sci_sysfs_remove(struct device *dev){
 }
 
 
-#endif
+//#endif
  
  
  
