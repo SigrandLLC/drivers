@@ -255,7 +255,13 @@ static struct pnp_driver sg16_isapnp_driver = {
 
 //---- Net device specific functions ----//
 static int __init  sg16_probe( struct net_device * );
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19)
 static irqreturn_t  sg16_interrupt( int, void *, struct pt_regs * );
+#else
+static irqreturn_t  sg16_interrupt( int, void *);
+#endif
+
 static int  sg16_open( struct net_device * );
 static int  sg16_close( struct net_device * );
 static int  sg16_start_xmit( struct sk_buff *, struct net_device * );

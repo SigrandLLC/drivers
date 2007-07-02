@@ -18,8 +18,13 @@
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
-#include <linux/config.h>
 #include <linux/vermagic.h>
+#include <linux/version.h>
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19)
+#	include <linux/config.h>
+#endif
+
 
 #include <asm/io.h>
 #include <asm/types.h>
@@ -295,13 +300,13 @@ sg16_probe( struct net_device  *ndev )
 	*(u32 *)(ndev->dev_addr + 2) = htonl( 0x01a39000 | ((u32)ndev->priv & 0x00000fff) );
 
         // Init net device handler functions 
-	ndev->open		= &sg16_open;
-        ndev->stop		= &sg16_close;
-        ndev->hard_start_xmit	= &sg16_start_xmit;
-	ndev->get_stats		= &sg16_get_stats;
-        ndev->set_multicast_list	= &set_multicast_list;
-	ndev->tx_timeout		= &sg16_tx_timeout;
-        ndev->watchdog_timeo	= TX_TIMEOUT;
+	ndev->open = &sg16_open;
+        ndev->stop = &sg16_close;
+        ndev->hard_start_xmit = &sg16_start_xmit;
+	ndev->get_stats	= &sg16_get_stats;
+        ndev->set_multicast_list= &set_multicast_list;
+	ndev->tx_timeout = &sg16_tx_timeout;
+        ndev->watchdog_timeo = TX_TIMEOUT;
 
 	PDEBUG(0,"start registering mem region");
 	if( !request_mem_region( ndev->mem_start, 0x1000, ndev->name ) )
@@ -325,6 +330,7 @@ sg16_probe( struct net_device  *ndev )
     		    		ndev->name, ndev->irq );
 	        goto err_exit;
         }
+
 	PDEBUG(8,"request_irq - ok");		
 	
 	if(nl->dev_type == sg16isa){
@@ -392,8 +398,13 @@ err_exit:
         return  err;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19)
 static irqreturn_t
 sg16_interrupt( int  irq,  void  *dev_id,  struct pt_regs  *regs )
+#else
+static irqreturn_t
+sg16_interrupt( int  irq,  void  *dev_id)
+#endif
 {
 	struct net_device *dev = (struct net_device *) dev_id;
 	struct net_local  *nl  = (struct net_local *)netdev_priv(dev);		
