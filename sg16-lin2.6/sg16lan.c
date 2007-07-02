@@ -870,7 +870,7 @@ shdsl_issue_cmd( struct net_local  *nl,  u8  cmd,  u8  *data,  u8  size )
         volatile struct cx28975_cmdarea  *p = nl->cmdp;
 	int  i;
         u8  cksum = 0, tmp;
-	u8 *databuf = p->in_data;
+	u8 *databuf = (u8*)p->in_data;
 
         iowrite8( 0xf0, (iotype)&(p->in_dest) );
 	iowrite8( cmd, (iotype)&(p->in_opcode ) );
