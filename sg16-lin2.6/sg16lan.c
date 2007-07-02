@@ -13,6 +13,7 @@
  *                      wtitten by Denis I. Timofeev - Artem U. Polyakov <art@sigrand.ru>
  *	11.12.2005	Version 1.0 (sysfs, firmware hotplug) - Artem U. Polyakov <art@sigrand.ru>
  *	05.11.2006	Version 2.0 (ISA adapter support) - Artem U. Polyakov <art@sigrand.ru>
+ *	02.07.2007	Version 2.1 (port to 2.6.19 changes) - Artem U. Polyakov <art@sigrand.ru>
  */
 
 #include <linux/init.h>
