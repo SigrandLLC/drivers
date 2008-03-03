@@ -6,6 +6,7 @@ print_usage()
     echo "   --no-proc-cfg            - not try to use /proc/config.gz to findout"
     echo "                              kernel configuration"       
     echo "   --kernel-source=<path>   - spesify directory, containing kernel sources"
+    echo "   --kernel-ver=<ver>       - spesify different kernel version"
     echo "   --autostart-off          - disable device start at boot time"
     echo "   --isa-support            - if you need SG-16ISA support"    
     echo "   --firmware-path=<path>   - spesify directory, wich used to load firmware"    
@@ -33,6 +34,7 @@ esac
 
 cflags=""
 pcfg="yes"
+kver="\`uname -r\`"
 for opt; do
 
     case $opt in 
@@ -44,6 +46,11 @@ for opt; do
 	    	exit
     	    fi
 	    ;;
+    --kernel-ver=*)
+		unset kver
+	    kver=`echo "$opt" | sed 's/[-_a-zA-Z0-9]*=//'` 
+		echo "Kernel version=$kver"
+		;;
     --autostart-off)
 	    echo "Automatic firmware download - off"
 	    cflags=$cflags"-DAUTOSTART_OFF "
@@ -129,22 +136,23 @@ done
 
 # Start with Makefile
 
-kver=`uname -r`
+
 
 # 1. Check that firmware loading module is configured in kernel
 if [ -z "$kpath" ]; then
-
-    if [  -d "/lib/modules/"$kver"/build" ]; then
-	kpath="/lib/modules/"$kver"/build"
-    elif [ -d "/usr/src/linux" ]; then
-	kpath="/usr/src/linux"	
-    else
-	echo $0:" cannot find kernel sources at: "$kpath1
-	echo $0:" cannot find kernel sources at: "$kpath2
-	exit	
+	eval kpath="/lib/modules/$kver/build"
+	echo $kpath
+    if [ ! -d "$kpath" ];then
+		if [ -d "/usr/src/linux" ]; then
+			kpath="/usr/src/linux"	
+	    else
+			echo $0:" cannot find kernel sources at: "$kpath1
+			echo $0:" cannot find kernel sources at: "$kpath2
+			exit	
+		fi
     fi
-    echo "Kernel path set to: "$kpath    
 fi
+echo "Kernel path setted to: "$kpath    
 
 if [ $pcfg = "yes" ]; then
 
@@ -216,6 +224,7 @@ fi
 rm --preserve-root -f Makefile
 sed <Makefile.tmpl > Makefile \
 -e "s%@KERNSRC@%$kpath%g" \
+-e "s%@KERNVER@%$kver%g" \
 -e "s%@FW_PATH@%$fpath%g" \
 -e "s%@CFLAGS@%$cflags%g"
 

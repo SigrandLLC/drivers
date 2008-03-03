@@ -1,5 +1,5 @@
 obj-m := sg16lan.o
-KERNELVERSION=`uname -r`
+KERNELVERSION=@KERNVER@
 MODULEPATH=/lib/modules/$(KERNELVERSION)/kernel/drivers/net/sg16lan.ko
 CFLAGS+=@CFLAGS@
 
