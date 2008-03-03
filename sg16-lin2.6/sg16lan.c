@@ -1,6 +1,6 @@
 /* sg16lan.c:  Sigrand SG-16PCI SHDSL modem driver for linux (kernel 2.6.x)
  *
- *	Written 2005-2006 by Artem U. Polyakov <art@sigrand.ru>
+ *	Written 2005-2006 by Artem U. Polyakov <artpol84@gmail.com>
  *
  *	This driver presents SG-16PCI modem 
  *	to system as common ethernet-like netcard.
@@ -10,10 +10,11 @@
  *
  *
  *	10.11.2005	initial revision of Granch SBNI16 modem driver v1.0 
- *                      wtitten by Denis I. Timofeev - Artem U. Polyakov <art@sigrand.ru>
- *	11.12.2005	Version 1.0 (sysfs, firmware hotplug) - Artem U. Polyakov <art@sigrand.ru>
- *	05.11.2006	Version 2.0 (ISA adapter support) - Artem U. Polyakov <art@sigrand.ru>
- *	02.07.2007	Version 2.1 (port to 2.6.19 changes) - Artem U. Polyakov <art@sigrand.ru>
+ *                      wtitten by Denis I. Timofeev - Artem U. Polyakov <artpol84@gmail.com>
+ *	11.12.2005	Version 1.0 (sysfs, firmware hotplug) - Artem U. Polyakov <artpol84@gmail.com>
+ *	05.11.2006	Version 2.0 (ISA adapter support) - Artem U. Polyakov <artpol84@gmail.com>
+ *	02.07.2007	Version 2.1 (port to 2.6.19 changes) - Artem U. Polyakov <artpol84@gmail.com>
+ *	03.03.2008	Version 2.2 (port to 2.6.20 changes - remove pci_module_init) - Artem U. Polyakov <artpol84@gmail.com>
  */
 
 #include <linux/init.h>
@@ -65,10 +66,10 @@
 #include "sg16debug.h"
 
 
-MODULE_DESCRIPTION( "Sigrand SG-16PCI,SG-16ISA driver Version 2.0\n" );
-MODULE_AUTHOR( "Maintainer: Artem U. Polyakov art@sigrand.ru\n" );
+MODULE_DESCRIPTION( "Sigrand SG-16PCI,SG-16ISA driver Version 2.2\n" );
+MODULE_AUTHOR( "Maintainer: Artem U. Polyakov artpol84@gmail.com\n" );
 MODULE_LICENSE( "GPL" );
-MODULE_VERSION("2.0");
+MODULE_VERSION("2.2");
 
 /* --------------------------------------------------------------------------
  *      Module initialisation/cleanup
