@@ -120,25 +120,25 @@ struct cx28975_cmdarea {
 #define FW_NAME_SIZE 255
 struct shdsl_config
 {
-    char fw_name[FW_NAME_SIZE];
-    u16 lrate:	10;
-    u16 master:	1;
-    u16 mod:	2;
-    u16 autob:	1;
-    u16 autob_en: 1;    
-    u16 need_preact: 1;
-    u8 remcfg :1;
-    u8 annex :2;
-    u8 :5;
+	char fw_name[FW_NAME_SIZE];
+	u16 lrate:	10;
+	u16 master:	1;
+	u16 mod:	2;
+	u16 autob:	1;
+	u16 autob_en: 1;    
+	u16 need_preact: 1;
+	u8 remcfg :1;
+	u8 annex :2;
+u8 :5;
 };
 
 struct hdlc_config
 {
-    u8  crc16: 1;
-    u8  fill_7e: 1;
-    u8  inv: 1;
-    u8  rburst: 1;
-    u8  wburst: 1;
+	u8  crc16: 1;
+	u8  fill_7e: 1;
+	u8  inv: 1;
+	u8  rburst: 1;
+	u8  wburst: 1;
 };
 
 struct dma_buffer{
@@ -149,47 +149,47 @@ struct dma_buffer{
 
 struct net_local{
     
-    struct net_device_stats	stats;
-    wait_queue_head_t  wait_for_intr;
-// debug purpose
-wait_queue_head_t  wait_test;
-//--------------------------------
+	struct net_device_stats	stats;
+	wait_queue_head_t  wait_for_intr;
+	// debug purpose
+	wait_queue_head_t  wait_test;
+	//--------------------------------
 
-    struct device *dev;
-    enum sg16_dev_type dev_type;
+	struct device *dev;
+	enum sg16_dev_type dev_type;
 
-    // Configuration structures
-    struct hdlc_config hdlc_cfg;
-    struct shdsl_config shdsl_cfg;
-    u8 irqret;
+	// Configuration structures
+	struct hdlc_config hdlc_cfg;
+	struct shdsl_config shdsl_cfg;
+	u8 irqret;
 
-    // SG-16PCI controller statistics
-    struct sg16_stats {
-    	u32  sent_pkts, rcvd_pkts;
-	u32  crc_errs, ufl_errs, ofl_errs, last_time;
-    } in_stats;
+	// SG-16PCI controller statistics
+	struct sg16_stats {
+		u32  sent_pkts, rcvd_pkts;
+		u32  crc_errs, ufl_errs, ofl_errs, last_time;
+	} in_stats;
 
-    spinlock_t rlock,xlock;
+	spinlock_t rlock,xlock;
     
-    void *mem_base;		// mapped memory address
+	void *mem_base;		// mapped memory address
 
-    volatile struct sg16_hw_regs	*regs;
-    volatile struct hw_descr	*tbd;
-    volatile struct hw_descr	*rbd;
-    volatile struct cx28975_cmdarea	*cmdp;
+	volatile struct sg16_hw_regs	*regs;
+	volatile struct hw_descr	*tbd;
+	volatile struct hw_descr	*rbd;
+	volatile struct cx28975_cmdarea	*cmdp;
 
-    // transmit and reception queues 
-    struct sk_buff *xq[ XQLEN ], *rq[ RQLEN ];
-    struct dma_buffer *rbuf,*xbuf;
-    unsigned head_xq, tail_xq, head_rq, tail_rq;
+	// transmit and reception queues 
+	struct sk_buff *xq[ XQLEN ], *rq[ RQLEN ];
+	struct dma_buffer *rbuf,*xbuf;
+	unsigned head_xq, tail_xq, head_rq, tail_rq;
 
 
-    // the descriptors mapped onto the first buffers in xq and rq 
-    unsigned head_tdesc, head_rdesc;
-    u8 fw_state;
+	// the descriptors mapped onto the first buffers in xq and rq 
+	unsigned head_tdesc, head_rdesc;
+	u8 fw_state;
     
-    // timered link check entire 
-    struct timer_list link_state;
+	// timered link check entire 
+	struct timer_list link_state;
 };
 
 // SHDSL transceiver statistics
@@ -212,40 +212,40 @@ module_exit(sg16_exit);
 #define SG16_PCI_DEVICE 	0x9d
 
 static int __devinit sg16_pci_probe_one(struct pci_dev *,
-			const struct pci_device_id *);
+					const struct pci_device_id *);
 static void __devexit  sg16_pci_remove_one(struct pci_dev *);
 
 static struct pci_device_id  sg16_pci_tbl[] __devinitdata = {
-	{ PCI_DEVICE(SG16_PCI_VENDOR,SG16_PCI_DEVICE) },
-	{ 0 }
+{ PCI_DEVICE(SG16_PCI_VENDOR,SG16_PCI_DEVICE) },
+{ 0 }
 };
 MODULE_DEVICE_TABLE( pci, sg16_pci_tbl );
 
 static struct pci_driver  sg16_driver = {
-	name:		"sg16lan",
-	probe:		sg16_pci_probe_one,
-	remove:		sg16_pci_remove_one,
-	id_table:	sg16_pci_tbl
+ name:		"sg16lan",
+ probe:		sg16_pci_probe_one,
+ remove:		sg16_pci_remove_one,
+ id_table:	sg16_pci_tbl
 };
 
 
 //---- ISA adapter related ----//
 static struct pnp_device_id sg16_pnp_tbl[] __initdata = {
-        {"AAA0016",(long)"Sigrand SG-16ISA"},
-        {"",0}     /* terminate list */
+{"AAA0016",(long)"Sigrand SG-16ISA"},
+{"",0}     /* terminate list */
 };
 
 MODULE_DEVICE_TABLE(pnp, sg16_pnp_tbl);
 
 static int __devinit sg16_isapnp_probe_one(struct pnp_dev *idev,
-		const struct pnp_device_id *dev_id);
+					   const struct pnp_device_id *dev_id);
 static void __devexit sg16_isapnp_remove_one(struct pnp_dev *idev);
 
 static struct pnp_driver sg16_isapnp_driver = {
-        name :		"sg16lan",
-        id_table:       sg16_pnp_tbl,
-        probe:          sg16_isapnp_probe_one,
-        remove:         sg16_isapnp_remove_one,
+ name :		"sg16lan",
+ id_table:       sg16_pnp_tbl,
+ probe:          sg16_isapnp_probe_one,
+ remove:         sg16_isapnp_remove_one,
 };
 
 #ifndef CONFIG_ISAPNP
