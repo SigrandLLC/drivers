@@ -77,18 +77,22 @@ MODULE_VERSION("2.2");
 
 int
 sg16_init( void ){
-    
+        int ret = 0;
+
+// TODO: specify correct version!!
+	printk(KERN_NOTICE"Sigrand SG-17PCI & SG-16ISA linux 2.6 driver: Loading\n");
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19)
 	pci_module_init( &sg16_driver );
-#else 
-	pci_register_driver( &sg16_driver );
+#else
+    ret = pci_register_driver( &sg16_driver );
 #endif
 	pnp_register_driver(&sg16_isapnp_driver);	
-	return 0;
+	return ret;
 }
 
 void
 sg16_exit( void ){
+	printk(KERN_NOTICE"Sigrand SG-17PCI & SG-16ISA linux 2.6 driver: Unloading\n");
 	pci_unregister_driver( &sg16_driver );
 	pnp_unregister_driver(&sg16_isapnp_driver);
 }
@@ -135,7 +139,13 @@ sg16_pci_probe_one( struct pci_dev  *pdev,  const struct pci_device_id  *ent )
 		err=ENODEV;
 		goto err1;
 	}
+	if( sg16_sysfs_register(ndev) ){
+		PDEBUG(0,"Fail to register network device sysfs entries");
+		goto err2;
+	}
 	return  0;
+ err2:
+	unregister_netdev(ndev);
  err1:	    
 	free_netdev(ndev);    
 	return err;
@@ -146,8 +156,6 @@ sg16_pci_remove_one( struct pci_dev  *pdev )
 {
 	struct net_device  *ndev = pci_get_drvdata( pdev );
 	struct net_local *nl=(struct net_local *)netdev_priv(ndev);    
-	struct device *dev=nl->dev;
-	struct device_driver *drv=dev->driver;
 
 	// timer entry 
 	del_timer_sync( &(nl->link_state) );
@@ -155,10 +163,8 @@ sg16_pci_remove_one( struct pci_dev  *pdev )
 	// shutdown device
 	hdlc_shutdown(nl);
     
-	// Remove symlink on device from driver dir in sysfs */
-	sysfs_remove_link(&(drv->kobj),ndev->name);
 	// Remove sysfs entires 
-	del_sg16_from_sysfs(dev);
+	sg16_sysfs_remove(ndev);
 
 	// Remove network device from OS
 	unregister_netdev( ndev );
@@ -245,8 +251,14 @@ sg16_isapnp_probe_one(struct pnp_dev *idev,const struct pnp_device_id *dev_id)
 		PDEBUG(0,"Fail to register network device");
 		goto fail2;
 	}
+	if( sg16_sysfs_register(ndev) ){
+		PDEBUG(0,"Fail to register network device sysfs entries");
+		goto fail3;    
+	}
 	PDEBUG(0,"end");	
 	return 0;	
+ fail3:
+	unregister_netdev( ndev );
  fail2:
 	free_netdev(ndev);
  fail1:
@@ -269,8 +281,7 @@ sg16_isapnp_remove_one(struct pnp_dev *idev)
 	// shutdown device 
 	hdlc_shutdown(nl);
 	// Remove sysfs entires 
-	del_sg16_from_sysfs(nl->dev);
-	sysfs_remove_link(&(drv->kobj),ndev->name);
+	sg16_sysfs_remove(ndev);
 	// Remove network device from OS 
 	kfree(nl->rbuf);
 	kfree(nl->xbuf);	
@@ -293,7 +304,7 @@ sg16_probe( struct net_device  *ndev )
 {
 	struct net_local  *nl  = (struct net_local *)netdev_priv(ndev);
 	struct device *dev = nl->dev;
-	struct device_driver *drv = dev->driver;    
+//	struct device_driver *drv = dev->driver;    
 	int err=-ENODEV;
 	u8 t;
 
@@ -332,7 +343,14 @@ sg16_probe( struct net_device  *ndev )
 	nl->cmdp = (struct cx28975_cmdarea *) ((u8 *)nl->mem_base + SG16_CMDP_OFFSET);
 
 	PDEBUG(0,"start registering irq");
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20)
 	if( request_irq(ndev->irq, sg16_interrupt, SA_SHIRQ, ndev->name, ndev) ){
+#else
+	if( request_irq(ndev->irq, sg16_interrupt, IRQF_SHARED, ndev->name, ndev) ){
+#endif
+
+
 		printk( KERN_ERR "%s: unable to get IRQ %d.\n",
 			ndev->name, ndev->irq );
 		goto err_exit;
@@ -355,27 +373,21 @@ sg16_probe( struct net_device  *ndev )
 	else 
 		printk( KERN_NOTICE "%s: Sigrand SG-16ISA SHDSL (irq %d, mem %#lx, dma %d)\n",
 			ndev->name, ndev->irq, ndev->mem_start, ndev->dma );
-		
-	SET_MODULE_OWNER( ndev );
 
+// TODO: specify correct version!!
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24)
+	SET_MODULE_OWNER( ndev );
+#endif
 	// shutdown device before startup
 	hdlc_shutdown(nl);
 
-	// Create symlink from driver dir to device dir in sysfs 
-	sysfs_create_link( &(drv->kobj),&(dev->kobj),ndev->name );
-
-	// Create sysfs entires 
-	if( init_sg16_in_sysfs( dev ) ){
-		printk( KERN_ERR "%s: unable to create sysfs entires\n",ndev->name);
-		err=-EPERM;	    
-		goto err_exit2;
-	}
 	// timered link chk entire
 	nl->link_state.data = ( unsigned long )ndev;
 	nl->link_state.function = shdsl_link_chk;
 	init_timer( &(nl->link_state) );
 
 	nl->shdsl_cfg.need_preact=1;
+	sg16_defcfg(ndev);
 #ifndef AUTOSTART_OFF
 	if( shdsl_dload_fw(dev)  )
 		printk(KERN_NOTICE"%s: cannot download firmware\n",ndev->name);
@@ -409,8 +421,8 @@ sg16_probe( struct net_device  *ndev )
 static irqreturn_t
 sg16_interrupt( int  irq,  void  *dev_id,  struct pt_regs  *regs )
 #else
-	static irqreturn_t
-	sg16_interrupt( int  irq,  void  *dev_id)
+static irqreturn_t
+sg16_interrupt( int  irq,  void  *dev_id)
 #endif
 {
 	struct net_device *dev = (struct net_device *) dev_id;
@@ -627,16 +639,21 @@ shdsl_dload_fw(struct device *dev)
 	volatile struct cx28975_cmdarea  *p = nl->cmdp;
 	struct firmware *fw;
 	size_t img_len;
-	u32   t;
-	int  i;
+	u32 t;
+	int  i, ret;
 	u8 cksum = 0;
+	
 
 	// 1.Get firmware from userspace 
-	if( request_firmware((const struct firmware **)&fw,cfg->fw_name,dev) ){
-		printk(KERN_ERR"%s: firmware file not found\n",ndev->name); 
-		release_firmware(fw);	
-		return -ENOENT;
+	ret = request_firmware((const struct firmware **)&fw,cfg->fw_name,dev);
+	if( ret == -ENOENT ){
+		printk(KERN_ERR"%s: firmware file \"%s\" not found\n",ndev->name,cfg->fw_name); 
+		return ret;
+	}else if( ret ){
+		printk(KERN_ERR"%s: firmware file \"%s\" request failed (err=%d)\n",ndev->name,cfg->fw_name,ret); 
+		return ret;
 	}
+	
 	for(i=0;i< fw->size;i++)
 		cksum += fw->data[i];
 
@@ -1251,14 +1268,11 @@ sg16_tx_timeout( struct net_device  *ndev )
  * Sysfs specific functions
  *----------------------------------------------------------------------------*/
 
-static int __devinit 
-init_sg16_in_sysfs(struct device *dev)
+static void sg16_defcfg(struct net_device *ndev)
 {
-	struct net_local *nl=
-		(struct net_local *)netdev_priv(dev_get_drvdata(dev));
+	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	struct shdsl_config *shcfg=&(nl->shdsl_cfg);
 	struct hdlc_config *hdcfg=&(nl->hdlc_cfg);
-
 	// initialising default parameters
 	//shdsl
 	strcpy(shcfg->fw_name,"sg16.bin");
@@ -1334,69 +1348,25 @@ init_sg16_in_sysfs(struct device *dev)
 #else    
 	hdcfg->inv=0;
 #endif    
-
-	// creating attributes of device in sysfs 
-	//shdsl	
-	device_create_file(dev,&dev_attr_rate);	
-	device_create_file(dev,&dev_attr_crate);
-	device_create_file(dev,&dev_attr_master);
-	device_create_file(dev,&dev_attr_remcfg);    
-	device_create_file(dev,&dev_attr_annex);
-	device_create_file(dev,&dev_attr_mod);
-	device_create_file(dev,&dev_attr_autobaud);
-	device_create_file(dev,&dev_attr_download);    
-	//hdlc
-	device_create_file(dev,&dev_attr_crc16);
-	device_create_file(dev,&dev_attr_fill_7e);
-	device_create_file(dev,&dev_attr_inv);
-	device_create_file(dev,&dev_attr_rburst);
-	device_create_file(dev,&dev_attr_wburst);
-	//addr
-	device_create_file(dev,&dev_attr_maddr);    
-	//stat
-	device_create_file(dev,&dev_attr_state);        
-	device_create_file(dev,&dev_attr_statistic);        
-	//debug
-	device_create_file(dev,&dev_attr_debug);
-	device_create_file(dev,&dev_attr_hdlc_regs);
-
-	return 0;
 }
 
-static void __devexit
-del_sg16_from_sysfs(struct device *dev)
-{
-	// removing attributes of device from sysfs 
-	//shdsl
-	device_remove_file(dev,&dev_attr_rate);	
-	device_remove_file(dev,&dev_attr_crate);	    
-	device_remove_file(dev,&dev_attr_master);
-	device_remove_file(dev,&dev_attr_remcfg);    
-	device_remove_file(dev,&dev_attr_annex);    
-	device_remove_file(dev,&dev_attr_mod);
-	device_remove_file(dev,&dev_attr_autobaud);
-	device_remove_file(dev,&dev_attr_download);    
-	//hdlc
-	device_remove_file(dev,&dev_attr_crc16);
-	device_remove_file(dev,&dev_attr_fill_7e);
-	device_remove_file(dev,&dev_attr_inv);
-	device_remove_file(dev,&dev_attr_rburst);
-	device_remove_file(dev,&dev_attr_wburst);
-	//addr
-	device_remove_file(dev,&dev_attr_maddr);        
-	//stat
-	device_remove_file(dev,&dev_attr_state);        
-	device_remove_file(dev,&dev_attr_statistic);        
-	//debug
-	device_remove_file(dev,&dev_attr_debug);            
-	device_remove_file(dev,&dev_attr_hdlc_regs);            	
-}
-
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,21)
+#	define to_net_dev(class) container_of(class, struct net_device, class_dev)
+#	define SG16_SYSFS_ATTR CLASS_DEVICE_ATTR
+#	define sg16_sysfs_attrname(name) class_device_attr_ ## name
+#	define SHOW_FUNC_PARAMS struct class_device *dev, char *buf
+#	define STORE_FUNC_PARAMS struct class_device *dev, const char *buf, size_t size
+#else
+#	define SG16_SYSFS_ATTR DEVICE_ATTR
+#	define sg16_sysfs_attrname(name)	dev_attr_ ## name
+#	define SHOW_FUNC_PARAMS struct device *dev, struct device_attribute *attr, char *buf
+#	define STORE_FUNC_PARAMS struct device *dev, struct device_attribute *attr,const char *buf, size_t size
+#endif
 /* rate attributes */
-static ssize_t
-show_rate( struct device *dev, ADDIT_ATTR char *buf )
+static ssize_t 
+show_rate(SHOW_FUNC_PARAMS) //struct device *dev, struct device_attribute *attr, char *buf) 
 {
-	struct net_device *ndev=(struct net_device *)dev_get_drvdata(dev);
+	struct net_device *ndev = to_net_dev(dev);
 	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	struct shdsl_config *cfg=&(nl->shdsl_cfg);
 	u8 t=0;
@@ -1418,9 +1388,9 @@ show_rate( struct device *dev, ADDIT_ATTR char *buf )
 }
 
 static ssize_t
-store_rate( struct device *dev, ADDIT_ATTR const char *buf, size_t size ) 
+store_rate( STORE_FUNC_PARAMS ) 
 {
-	struct net_device *ndev=(struct net_device *)dev_get_drvdata(dev);
+	struct net_device *ndev = to_net_dev(dev);
 	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	struct shdsl_config *cfg=&(nl->shdsl_cfg);
 	char *endp;
@@ -1438,12 +1408,12 @@ store_rate( struct device *dev, ADDIT_ATTR const char *buf, size_t size )
 	nl->shdsl_cfg.need_preact=1;
 	return size;
 }
+static SG16_SYSFS_ATTR(rate,S_IRUGO|S_IWUSR,show_rate,store_rate);
 
-
-static ssize_t
-show_crate( struct device *dev, ADDIT_ATTR char *buf )
+static ssize_t 
+show_crate(SHOW_FUNC_PARAMS) 
 {
-	struct net_device *ndev=(struct net_device *)dev_get_drvdata(dev);
+	struct net_device *ndev = to_net_dev(dev);
 	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	struct shdsl_config *cfg=&(nl->shdsl_cfg);
 	u8 t=0;
@@ -1469,12 +1439,15 @@ show_crate( struct device *dev, ADDIT_ATTR char *buf )
 		}
 	return snprintf(buf,PAGE_SIZE,"%u\n",tmp<<3);
 }
+static SG16_SYSFS_ATTR(crate,S_IRUGO,show_crate,NULL);
+
 
 // master attribute 
-static ssize_t
-show_master( struct device *dev, ADDIT_ATTR char *buf ) 
+static ssize_t 
+show_master(SHOW_FUNC_PARAMS) 
 {
-	struct net_local *nl=(struct net_local *)netdev_priv(dev_get_drvdata(dev));
+	struct net_device *ndev = to_net_dev(dev);
+	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	struct shdsl_config *cfg=&(nl->shdsl_cfg);
 
 	if( cfg->master )
@@ -1484,9 +1457,9 @@ show_master( struct device *dev, ADDIT_ATTR char *buf )
 }
 
 static ssize_t
-store_master( struct device *dev, ADDIT_ATTR const char *buf, size_t size ) 
+store_master( STORE_FUNC_PARAMS ) 
 {
-	struct net_device *ndev=(struct net_device *)dev_get_drvdata(dev);
+	struct net_device *ndev = to_net_dev(dev);
 	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	struct shdsl_config *cfg=&(nl->shdsl_cfg);
 
@@ -1503,13 +1476,14 @@ store_master( struct device *dev, ADDIT_ATTR const char *buf, size_t size )
 	nl->shdsl_cfg.need_preact=1;
 	return strnlen(buf,PAGE_SIZE);
 }
-
+static SG16_SYSFS_ATTR(master,S_IRUGO|S_IWUSR,show_master,store_master);
 
 // Remote configuration setup 
-static ssize_t
-show_remcfg( struct device *dev, ADDIT_ATTR char *buf )
+static ssize_t 
+show_remcfg(SHOW_FUNC_PARAMS) 
 {
-	struct net_local *nl=(struct net_local *)netdev_priv(dev_get_drvdata(dev));
+	struct net_device *ndev = to_net_dev(dev);
+	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	struct shdsl_config *cfg=&(nl->shdsl_cfg);
 
 	if( cfg->remcfg )
@@ -1518,10 +1492,10 @@ show_remcfg( struct device *dev, ADDIT_ATTR char *buf )
 		return snprintf(buf,PAGE_SIZE,"local"); 
 }
 
-static ssize_t
-store_remcfg( struct device *dev, ADDIT_ATTR const char *buf, size_t size )
+static ssize_t 
+store_remcfg(STORE_FUNC_PARAMS) 
 {
-	struct net_device *ndev=(struct net_device *)dev_get_drvdata(dev);
+	struct net_device *ndev = to_net_dev(dev);
 	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	struct shdsl_config *cfg=&(nl->shdsl_cfg);
 
@@ -1538,12 +1512,14 @@ store_remcfg( struct device *dev, ADDIT_ATTR const char *buf, size_t size )
 	nl->shdsl_cfg.need_preact=1;
 	return strnlen(buf,PAGE_SIZE);
 }
+static SG16_SYSFS_ATTR(remcfg,S_IRUGO|S_IWUSR,show_remcfg,store_remcfg);
 
 // Annex setup 
 static ssize_t 
-show_annex( struct device *dev, ADDIT_ATTR char *buf )
+show_annex(SHOW_FUNC_PARAMS) 
 {
-	struct net_local *nl=(struct net_local *)netdev_priv(dev_get_drvdata(dev));
+	struct net_device *ndev = to_net_dev(dev);
+	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	struct shdsl_config *cfg=&(nl->shdsl_cfg);
 	u8 t=cfg->annex;
 
@@ -1560,10 +1536,10 @@ show_annex( struct device *dev, ADDIT_ATTR char *buf )
 	}
 }
 
-static ssize_t
-store_annex( struct device *dev, ADDIT_ATTR const char *buf, size_t size )
+static ssize_t 
+store_annex( STORE_FUNC_PARAMS ) 
 {
-	struct net_device *ndev=(struct net_device *)dev_get_drvdata(dev);
+	struct net_device *ndev = to_net_dev(dev);
 	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	struct shdsl_config *cfg=&(nl->shdsl_cfg);
 	u8 tmp;
@@ -1592,12 +1568,14 @@ store_annex( struct device *dev, ADDIT_ATTR const char *buf, size_t size )
 	nl->shdsl_cfg.need_preact=1;
 	return strnlen(buf,PAGE_SIZE);
 }
+static SG16_SYSFS_ATTR(annex,S_IRUGO|S_IWUSR,show_annex,store_annex);
+
 
 /* mod attribute */
-static ssize_t
-show_mod( struct device *dev, ADDIT_ATTR char *buf )
+static ssize_t 
+show_mod(SHOW_FUNC_PARAMS) 
 {
-	struct net_device *ndev=(struct net_device *)dev_get_drvdata(dev);
+	struct net_device *ndev = to_net_dev(dev);
 	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	struct shdsl_config *cfg=&(nl->shdsl_cfg);
 	char  *modstr[] = {"TCPAM32", "TCPAM16", "TCPAM8", "TCPAM4"};    
@@ -1625,10 +1603,10 @@ show_mod( struct device *dev, ADDIT_ATTR char *buf )
 	return snprintf(buf,PAGE_SIZE,"%s\n",modstr[cfg->mod]);
 }
 
-static ssize_t
-store_mod( struct device *dev, ADDIT_ATTR const char *buf, size_t size ) 
+static ssize_t 
+store_mod( STORE_FUNC_PARAMS ) 
 {
-	struct net_device *ndev=(struct net_device *)dev_get_drvdata(dev);
+	struct net_device *ndev = to_net_dev(dev);
 	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	struct shdsl_config *cfg=&(nl->shdsl_cfg);
 	char tmp;    
@@ -1656,13 +1634,14 @@ store_mod( struct device *dev, ADDIT_ATTR const char *buf, size_t size )
 	nl->shdsl_cfg.need_preact=1;
 	return size;
 }
+static SG16_SYSFS_ATTR(mod,S_IRUGO|S_IWUSR,show_mod,store_mod);
 
 // autobaud attribute 
 static ssize_t
-show_autob( struct device *dev, ADDIT_ATTR char *buf )
+show_autob(SHOW_FUNC_PARAMS) 
 {
-	struct net_local *nl=
-		(struct net_local *)netdev_priv(dev_get_drvdata(dev));
+	struct net_device *ndev = to_net_dev(dev);
+	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	struct shdsl_config *cfg=&(nl->shdsl_cfg);
 
 	if( cfg->autob )
@@ -1674,9 +1653,9 @@ show_autob( struct device *dev, ADDIT_ATTR char *buf )
 }
 
 static ssize_t
-store_autob( struct device *dev, ADDIT_ATTR const char *buf, size_t size )
+store_autob( STORE_FUNC_PARAMS ) 
 {
-	struct net_device *ndev=(struct net_device *)dev_get_drvdata(dev);
+	struct net_device *ndev = to_net_dev(dev);
 	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	struct shdsl_config *cfg=&(nl->shdsl_cfg);
 	u8 tmp;
@@ -1705,13 +1684,13 @@ store_autob( struct device *dev, ADDIT_ATTR const char *buf, size_t size )
 	nl->shdsl_cfg.need_preact=1;
 	return size;
 }
-
+static SG16_SYSFS_ATTR(autob,S_IRUGO|S_IWUSR,show_autob,store_autob);
 
 // download attribute 
 static ssize_t
-show_download( struct device *dev, ADDIT_ATTR char *buf )
+show_download(SHOW_FUNC_PARAMS) 
 {
-	struct net_device *ndev=(struct net_device *)dev_get_drvdata(dev);
+	struct net_device *ndev = to_net_dev(dev);
 	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	u8 t;
 
@@ -1732,9 +1711,9 @@ show_download( struct device *dev, ADDIT_ATTR char *buf )
 }	
 
 static ssize_t
-store_download( struct device *dev, ADDIT_ATTR const char *buf, size_t size )
+store_download( STORE_FUNC_PARAMS ) 
 {
-	struct net_device *ndev=(struct net_device *)dev_get_drvdata(dev);
+	struct net_device *ndev = to_net_dev(dev);
 	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
     
 	if( !size )	return 0;
@@ -1742,17 +1721,20 @@ store_download( struct device *dev, ADDIT_ATTR const char *buf, size_t size )
 		return size;
 
 	if( buf[0] == '1' )
-		shdsl_dload_fw(dev);
+		shdsl_dload_fw(nl->dev);
 
 	nl->shdsl_cfg.need_preact=1;
 	return size;
 }
+static SG16_SYSFS_ATTR(download,S_IRUGO|S_IWUSR,show_download,store_download);
+
 
 // CRC count attribute 
 static ssize_t
-show_crc16( struct device *dev, ADDIT_ATTR char *buf )
+show_crc16(SHOW_FUNC_PARAMS) 
 {
-	struct net_local *nl=(struct net_local *)netdev_priv(dev_get_drvdata(dev));
+	struct net_device *ndev = to_net_dev(dev);
+	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	struct hdlc_config *cfg=&(nl->hdlc_cfg);
 
 	if( cfg->crc16 )
@@ -1762,9 +1744,9 @@ show_crc16( struct device *dev, ADDIT_ATTR char *buf )
 }
 
 static ssize_t
-store_crc16( struct device *dev, ADDIT_ATTR const char *buf, size_t size )
+store_crc16( STORE_FUNC_PARAMS ) 
 {
-	struct net_device *ndev=(struct net_device *)dev_get_drvdata(dev);
+	struct net_device *ndev = to_net_dev(dev);
 	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	struct hdlc_config *cfg=&(nl->hdlc_cfg);
 	u8 cfg_bt;
@@ -1792,12 +1774,14 @@ store_crc16( struct device *dev, ADDIT_ATTR const char *buf, size_t size )
 	}	
 	return size;	
 }
+static SG16_SYSFS_ATTR(crc16,S_IRUGO|S_IWUSR,show_crc16,store_crc16);
 
-static ssize_t
-show_fill_7e( struct device *dev, ADDIT_ATTR char *buf )
+// Fill byte
+static ssize_t 
+show_fill_7e(SHOW_FUNC_PARAMS) 
 {
-	struct net_local *nl=
-		(struct net_local *)netdev_priv(dev_get_drvdata(dev));
+	struct net_device *ndev = to_net_dev(dev);
+	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	struct hdlc_config *cfg=&(nl->hdlc_cfg);
 
 	if( cfg->fill_7e )
@@ -1806,10 +1790,10 @@ show_fill_7e( struct device *dev, ADDIT_ATTR char *buf )
 		return snprintf(buf,PAGE_SIZE,"0xFF");    
 }
 
-static ssize_t
-store_fill_7e( struct device *dev, ADDIT_ATTR const char *buf, size_t size ) 
+static ssize_t 
+store_fill_7e( STORE_FUNC_PARAMS ) 
 {
-	struct net_device *ndev=(struct net_device *)dev_get_drvdata(dev);
+	struct net_device *ndev = to_net_dev(dev);
 	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	struct hdlc_config *cfg=&(nl->hdlc_cfg);
 	u8 cfg_bt;
@@ -1837,12 +1821,14 @@ store_fill_7e( struct device *dev, ADDIT_ATTR const char *buf, size_t size )
 	}	
 	return size;	
 }
+static SG16_SYSFS_ATTR(fill_7e,S_IRUGO|S_IWUSR,show_fill_7e,store_fill_7e);
 
-static ssize_t 
-show_inv( struct device *dev, ADDIT_ATTR char *buf )
+// Inversion
+static ssize_t
+show_inv(SHOW_FUNC_PARAMS) 
 {
-	struct net_local *nl=
-		(struct net_local *)netdev_priv(dev_get_drvdata(dev));
+	struct net_device *ndev = to_net_dev(dev);
+	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	struct hdlc_config *cfg=&(nl->hdlc_cfg);
 
 	if( cfg->inv )
@@ -1852,9 +1838,9 @@ show_inv( struct device *dev, ADDIT_ATTR char *buf )
 }
 
 static ssize_t
-store_inv( struct device *dev, ADDIT_ATTR const char *buf, size_t size )
+store_inv( STORE_FUNC_PARAMS ) 
 {
-	struct net_device *ndev=(struct net_device *)dev_get_drvdata(dev);
+	struct net_device *ndev = to_net_dev(dev);
 	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	struct hdlc_config *cfg=&(nl->hdlc_cfg);
 	u8 cfg_bt;
@@ -1881,11 +1867,14 @@ store_inv( struct device *dev, ADDIT_ATTR const char *buf, size_t size )
 	}	
 	return size;	
 }
+static SG16_SYSFS_ATTR(inv,S_IRUGO|S_IWUSR,show_inv,store_inv);
 
+// Read burst setting
 static ssize_t
-show_rburst( struct device *dev, ADDIT_ATTR char *buf )
+show_rburst(SHOW_FUNC_PARAMS) 
 {
-	struct net_local *nl=(struct net_local *)netdev_priv(dev_get_drvdata(dev));
+	struct net_device *ndev = to_net_dev(dev);
+	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	struct hdlc_config *cfg=&(nl->hdlc_cfg);
 
 	if( cfg->rburst )
@@ -1895,9 +1884,9 @@ show_rburst( struct device *dev, ADDIT_ATTR char *buf )
 }
 
 static ssize_t
-store_rburst( struct device *dev, ADDIT_ATTR const char *buf, size_t size )
+store_rburst( STORE_FUNC_PARAMS ) 
 {
-	struct net_device *ndev=(struct net_device *)dev_get_drvdata(dev);
+	struct net_device *ndev = to_net_dev(dev);
 	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	struct hdlc_config *cfg=&(nl->hdlc_cfg);
 	u8 cfg_bt;
@@ -1925,11 +1914,14 @@ store_rburst( struct device *dev, ADDIT_ATTR const char *buf, size_t size )
 
 	return size;	
 }
+static SG16_SYSFS_ATTR(rburst,S_IRUGO|S_IWUSR,show_rburst,store_rburst);
 
+// Write Burst setting
 static ssize_t
-show_wburst( struct device *dev, ADDIT_ATTR char *buf ) 
+show_wburst(SHOW_FUNC_PARAMS) 
 {
-	struct net_local *nl=(struct net_local *)netdev_priv(dev_get_drvdata(dev));
+	struct net_device *ndev = to_net_dev(dev);
+	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	struct hdlc_config *cfg=&(nl->hdlc_cfg);
 
 	if( cfg->wburst )
@@ -1939,9 +1931,9 @@ show_wburst( struct device *dev, ADDIT_ATTR char *buf )
 }
 
 static ssize_t
-store_wburst( struct device *dev, ADDIT_ATTR const char *buf, size_t size )
+store_wburst( STORE_FUNC_PARAMS ) 
 {
-	struct net_device *ndev=(struct net_device *)dev_get_drvdata(dev);
+	struct net_device *ndev = to_net_dev(dev);
 	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	struct hdlc_config *cfg=&(nl->hdlc_cfg);
 	u8 cfg_bt;
@@ -1969,12 +1961,13 @@ store_wburst( struct device *dev, ADDIT_ATTR const char *buf, size_t size )
 
 	return size;	
 }
+static SG16_SYSFS_ATTR(wburst,S_IRUGO|S_IWUSR,show_wburst,store_wburst);
 
 // MAC address less significant value 
 static ssize_t
-store_maddr( struct device *dev, ADDIT_ATTR const char *buf, size_t size ) 
+store_maddr( STORE_FUNC_PARAMS ) 
 {
-	struct net_device *ndev= (struct net_device *)dev_get_drvdata(dev);
+	struct net_device *ndev = to_net_dev(dev);
 	u16 tmp;
 	char *endp;
 
@@ -1989,13 +1982,14 @@ store_maddr( struct device *dev, ADDIT_ATTR const char *buf, size_t size )
 
 	return size;
 }
+static SG16_SYSFS_ATTR(maddr,S_IWUSR,NULL,store_maddr);
+
 
 // Statistic 
-
 static ssize_t
-show_dev_state( struct device *dev, ADDIT_ATTR char *buf ) 
+show_dev_state(SHOW_FUNC_PARAMS) 
 {
-	struct net_device *ndev= (struct net_device *)dev_get_drvdata(dev);
+	struct net_device *ndev = to_net_dev(dev);
 	struct net_local *nl=(struct net_local *)netdev_priv(ndev);    
 	volatile struct cx28975_cmdarea  *p = nl->cmdp;    
 	u8 stat_1,stat_3;
@@ -2028,11 +2022,14 @@ show_dev_state( struct device *dev, ADDIT_ATTR char *buf )
 	} 
 	return 0;
 }
+static SG16_SYSFS_ATTR(dev_state,S_IRUGO,show_dev_state,NULL);
 
+// Statistics
 static ssize_t
-show_statistic( struct device *dev, ADDIT_ATTR char *buf ) 
+show_statistic(SHOW_FUNC_PARAMS) 
 {
-	struct net_local *nl=(struct net_local *)netdev_priv(dev_get_drvdata(dev));
+	struct net_device *ndev = to_net_dev(dev);
+	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	struct sg16_stats *sb_stat=&(nl->in_stats);
 	struct dsl_stats ds;
 
@@ -2051,9 +2048,10 @@ show_statistic( struct device *dev, ADDIT_ATTR char *buf )
 }
 
 static ssize_t
-store_statistic( struct device *dev, ADDIT_ATTR const char *buf, size_t size ) 
+store_statistic( STORE_FUNC_PARAMS ) 
 {
-	struct net_local *nl=(struct net_local *)netdev_priv(dev_get_drvdata(dev));
+	struct net_device *ndev = to_net_dev(dev);
+	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
     
 	if( !size )	return size;
 
@@ -2061,21 +2059,23 @@ store_statistic( struct device *dev, ADDIT_ATTR const char *buf, size_t size )
 		shdsl_clr_stat(nl);
 	return size;
 }
+static SG16_SYSFS_ATTR(statistic,S_IRUGO|S_IWUSR,show_statistic,store_statistic);
 
 // debug 
 static u8 mem_ret[PAGE_SIZE]="";
 
 static ssize_t
-show_debug( struct device *dev, ADDIT_ATTR char *buf ) 
+show_debug(SHOW_FUNC_PARAMS) 
 {
 	strncat(buf,mem_ret,PAGE_SIZE);
 	return strlen(buf);
 }
 
 static ssize_t
-store_debug( struct device *dev, ADDIT_ATTR const char *buff, size_t size )
+store_debug( STORE_FUNC_PARAMS ) 
 {
-	struct net_local *nl=(struct net_local *)netdev_priv(dev_get_drvdata(dev));
+	struct net_device *ndev = to_net_dev(dev);
+	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 	volatile struct cx28975_cmdarea  *p = nl->cmdp;    
 	u8 cmd,args[200],tmp1;
 	u16 len;
@@ -2085,7 +2085,7 @@ store_debug( struct device *dev, ADDIT_ATTR const char *buff, size_t size )
 	if( !size )	return size;
     
 	len= (PAGE_SIZE-1 > size) ? size : PAGE_SIZE-1;
-	strncpy(bf,buff,len);
+	strncpy(bf,buf,len);
 	bf[len]=0;
 
 	ptr=bf;
@@ -2116,14 +2116,79 @@ store_debug( struct device *dev, ADDIT_ATTR const char *buff, size_t size )
 	}
 	return size;
 }
+static SG16_SYSFS_ATTR(debug,S_IRUGO|S_IWUSR,show_debug,store_debug);
 				
+// debug hdlc regs
 static ssize_t
-show_hdlc_regs( struct device *dev, ADDIT_ATTR char *buf ) 
+show_hdlc_regs(SHOW_FUNC_PARAMS) 
 {
-	struct net_local *nl=(struct net_local *)netdev_priv(dev_get_drvdata(dev));
+	struct net_device *ndev = to_net_dev(dev);
+	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
 
 	return snprintf(buf,PAGE_SIZE,
 			"CRA=%02x CRB=%02x SR=%02x IMR=%02x\nCRDR=%02x LRDR=%02x CTDR=%02x LTDR=%02x",
 			nl->regs->CRA,nl->regs->CRB,nl->regs->SR,nl->regs->IMR,
 			nl->regs->CRDR,nl->regs->LRDR,nl->regs->CTDR,nl->regs->LTDR);
+}
+static SG16_SYSFS_ATTR(hdlc_regs,S_IRUGO|S_IWUSR,show_hdlc_regs,NULL);
+
+// sysfs registration
+
+static struct attribute *sg16_attrs[] = {
+    // shdsl
+    &sg16_sysfs_attrname(rate).attr,
+    &sg16_sysfs_attrname(crate).attr,
+    &sg16_sysfs_attrname(master).attr,
+    &sg16_sysfs_attrname(remcfg).attr,
+    &sg16_sysfs_attrname(annex).attr,
+    &sg16_sysfs_attrname(mod).attr,
+    &sg16_sysfs_attrname(autob).attr,
+    &sg16_sysfs_attrname(download).attr,
+    &sg16_sysfs_attrname(crc16).attr,
+    &sg16_sysfs_attrname(fill_7e).attr,
+    &sg16_sysfs_attrname(inv).attr,
+    &sg16_sysfs_attrname(rburst).attr,
+    &sg16_sysfs_attrname(wburst).attr,
+    &sg16_sysfs_attrname(maddr).attr,
+    &sg16_sysfs_attrname(dev_state).attr,
+    &sg16_sysfs_attrname(statistic).attr,
+    &sg16_sysfs_attrname(debug).attr,
+    &sg16_sysfs_attrname(hdlc_regs).attr,
+    NULL
+};
+
+static struct attribute_group sg16_group = {
+    .name = "sg_private",
+    .attrs = sg16_attrs,
+};
+
+static int __devinit 
+sg16_sysfs_register(struct net_device *ndev)
+{
+	struct net_local *nl=(struct net_local *)netdev_priv(ndev);
+	static char fname[10] = "device";
+	int ret;
+
+	// creating attributes of device in sysfs 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,21)
+	ret = sysfs_create_group(&(ndev->class_dev.kobj), &sg16_group);
+	sysfs_create_link( &(ndev->class_dev.kobj),&(nl->dev->kobj),fname);
+#else
+	ret = sysfs_create_group(&(ndev->dev.kobj), &sg16_group);
+	sysfs_create_link( &(ndev->dev.kobj),&(nl->dev->kobj),fname);
+#endif
+	return ret;
+}
+
+static void __devexit
+sg16_sysfs_remove(struct net_device *ndev)
+{
+	// removing attributes of device from sysfs 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,21)
+	sysfs_remove_group(&(ndev->class_dev.kobj), &sg16_group);
+//	sysfs_remove_link(&(ndev->class_dev.kobj),"device");
+#else
+	sysfs_remove_group(&(ndev->dev.kobj), &sg16_group);
+//	sysfs_remove_link(&(ndev->dev.kobj),"device");
+#endif
 }
