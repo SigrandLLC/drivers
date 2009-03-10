@@ -203,8 +203,7 @@ struct dsl_stats {
 //---- Driver initialisation ----//
 static int  sg16_init( void );
 static void sg16_exit( void );
-module_init(sg16_init);
-module_exit(sg16_exit);
+static void __devinit dsl_init( struct net_device *ndev);
 
 //---- PCI adapter related ----//
 // We don't have official vendor id yet... 
@@ -215,7 +214,7 @@ static int __devinit sg16_pci_probe_one(struct pci_dev *,
 					const struct pci_device_id *);
 static void __devexit  sg16_pci_remove_one(struct pci_dev *);
 
-static struct pci_device_id  sg16_pci_tbl[] __devinitdata = {
+static struct pci_device_id  __devinitdata sg16_pci_tbl[]  = {
 { PCI_DEVICE(SG16_PCI_VENDOR,SG16_PCI_DEVICE) },
 { 0 }
 };
@@ -230,11 +229,10 @@ static struct pci_driver  sg16_driver = {
 
 
 //---- ISA adapter related ----//
-static struct pnp_device_id sg16_pnp_tbl[] __initdata = {
+static struct pnp_device_id __devinitdata sg16_pnp_tbl[]  = {
 {"AAA0016",(long)"Sigrand SG-16ISA"},
 {"",0}     /* terminate list */
 };
-
 MODULE_DEVICE_TABLE(pnp, sg16_pnp_tbl);
 
 static int __devinit sg16_isapnp_probe_one(struct pnp_dev *idev,
@@ -254,7 +252,7 @@ static struct pnp_driver sg16_isapnp_driver = {
 #endif
 
 //---- Net device specific functions ----//
-static int __init  sg16_probe( struct net_device * );
+static int __devinit  sg16_probe( struct net_device * );
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19)
 static irqreturn_t  sg16_interrupt( int, void *, struct pt_regs * );

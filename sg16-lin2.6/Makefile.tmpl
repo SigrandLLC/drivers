@@ -16,3 +16,9 @@ install: sg16lan.ko
 
 clean:
 	make -C @KERNSRC@ SUBDIRS=$(PWD) clean
+	rm -f Module.markers modules.order
+
+distclean: clean
+	rm sg16cfg Makefile
+
+

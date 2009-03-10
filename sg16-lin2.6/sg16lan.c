@@ -15,6 +15,9 @@
  *	05.11.2006	Version 2.0 (ISA adapter support) - Artem U. Polyakov <artpol84@gmail.com>
  *	02.07.2007	Version 2.1 (port to 2.6.19 changes) - Artem U. Polyakov <artpol84@gmail.com>
  *	03.03.2008	Version 2.2 (port to 2.6.20 changes - remove pci_module_init) - Artem U. Polyakov <artpol84@gmail.com>
+ *	10.03.2009	Version 2.3 (port to 2.6.21-28) - Artem U. Polyakov <artpol84@gmail.com>
+ *			- Fix reciver interrupt handler (move RX flag drop before recv_allocate_buffers, problem was on slow processors)
+ *			- Fix carrier representation in sg16_open (after preact low level link is down but network link remains RUNNING)
  */
 
 #include <linux/init.h>
@@ -65,44 +68,50 @@
 #define DEFAULT_LEV 20
 #include "sg16debug.h"
 
+#define DRVER "2.3"
 
-MODULE_DESCRIPTION( "Sigrand SG-16PCI,SG-16ISA driver Version 2.2\n" );
+
+MODULE_DESCRIPTION( "Sigrand SG-16PCI,SG-16ISA driver Version "DRVER"\n" );
 MODULE_AUTHOR( "Maintainer: Artem U. Polyakov artpol84@gmail.com\n" );
 MODULE_LICENSE( "GPL" );
-MODULE_VERSION("2.2");
+MODULE_VERSION(DRVER);
 
 /* --------------------------------------------------------------------------
  *      Module initialisation/cleanup
  * -------------------------------------------------------------------------- */
 
-int
-sg16_init( void ){
+static int __init
+sg16_init( void )
+{
         int ret = 0;
-
-// TODO: specify correct version!!
-	printk(KERN_NOTICE"Sigrand SG-17PCI & SG-16ISA linux 2.6 driver: Loading\n");
+	printk(KERN_NOTICE"Sigrand SG-17PCI & SG-16ISA linux 2.6.x driver(v"DRVER"): Loading\n");
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19)
 	pci_module_init( &sg16_driver );
 #else
-    ret = pci_register_driver( &sg16_driver );
+        ret = pci_register_driver( &sg16_driver );
 #endif
 	pnp_register_driver(&sg16_isapnp_driver);	
 	return ret;
 }
 
-void
-sg16_exit( void ){
-	printk(KERN_NOTICE"Sigrand SG-17PCI & SG-16ISA linux 2.6 driver: Unloading\n");
+static void __exit
+sg16_exit( void )
+{
 	pci_unregister_driver( &sg16_driver );
 	pnp_unregister_driver(&sg16_isapnp_driver);
+	printk(KERN_NOTICE"Sigrand SG-17PCI & SG-16ISA linux 2.6.x driver(v"DRVER"): Unloaded\n");
 }
 
-void
+module_init(sg16_init);
+module_exit(sg16_exit);
+
+static void __devinit
 dsl_init( struct net_device *ndev)
 {
 	ether_setup(ndev);    
 	ndev->init = sg16_probe;
 }
+
 
 /* --------------------------------------------------------------------------
  *      PCI adapter initialisation/cleanup
@@ -178,9 +187,7 @@ sg16_pci_remove_one( struct pci_dev  *pdev )
  *      ISA adapter initialisation/cleanup
  * -------------------------------------------------------------------------- */
 
-
-
-static int
+static int __devinit
 sg16_isapnp_probe_one(struct pnp_dev *idev,const struct pnp_device_id *dev_id)
 {
 	struct net_device *ndev;
@@ -265,7 +272,8 @@ sg16_isapnp_probe_one(struct pnp_dev *idev,const struct pnp_device_id *dev_id)
 	pnp_device_detach( idev );
 	return error;
 }
-static void
+
+static void __devexit
 sg16_isapnp_remove_one(struct pnp_dev *idev)
 {
 	struct net_device *ndev;
@@ -299,7 +307,7 @@ sg16_isapnp_remove_one(struct pnp_dev *idev)
  *   Network device functions   
  * -------------------------------------------------------------------------- */
 
-static int __init
+static int __devinit
 sg16_probe( struct net_device  *ndev )
 {
 	struct net_local  *nl  = (struct net_local *)netdev_priv(ndev);
@@ -456,21 +464,18 @@ sg16_interrupt( int  irq,  void  *dev_id)
 			++nl->stats.tx_errors;
 			++nl->stats.tx_fifo_errors;
 		}
-	if( status & RXS )
-		{
-			if( spin_trylock( &(nl->rlock) ) )
-				{
+	if( status & RXS ){
+			if( spin_trylock( &(nl->rlock) ) ){
 					recv_init_frames( dev );
+					iowrite8( RXS,(iotype)&(nl->regs->SR));
 					recv_alloc_buffs( dev );
 					spin_unlock( &(nl->rlock) );
-				}
-			iowrite8( RXS,(iotype)&(nl->regs->SR));
-		}
-	if( status & TXS )
-		{
+			}
+	}
+	if( status & TXS ){
 			xmit_free_buffs( dev );
 			iowrite8( TXS,(iotype)&(nl->regs->SR));		
-		}
+	}
 	if( status & CRC )
 		{
 			++nl->in_stats.crc_errs;
@@ -500,6 +505,9 @@ sg16_open( struct net_device  *ndev )
 	u8 t;    
 	// shdsl preactivation 
 	if( nl->shdsl_cfg.need_preact ){
+		// put carrier down, no interrpupt may be posted, 
+		// but device is definitely down
+		netif_carrier_off( ndev );
 		iowrite8( EXT, (iotype)&(nl->regs->IMR) ); 
 		iowrite8( 0xff, (iotype)&(nl->regs->SR) ); 
 		iowrite8( XRST , (iotype)&(nl->regs->CRA));       			    
@@ -675,10 +683,10 @@ shdsl_dload_fw(struct device *dev)
 		goto err_exit;
 	PDEBUG(9,"dload start");
 	for( i = 0, img_len=fw->size;  img_len >= 75;  i += 75, img_len -= 75 )
-		if( shdsl_issue_cmd( nl, _DSL_DOWNLOAD_DATA, fw->data + i, 75 ) )
+		if( shdsl_issue_cmd( nl, _DSL_DOWNLOAD_DATA, (u8*)fw->data + i, 75 ) )
 			goto err_exit;
 	if( img_len
-	    &&  shdsl_issue_cmd(nl,_DSL_DOWNLOAD_DATA,(fw->data+i),img_len) )
+	    &&  shdsl_issue_cmd(nl,_DSL_DOWNLOAD_DATA,(u8*)(fw->data+i),img_len) )
 		goto err_exit;
 	t = (cksum ^ 0xff) + 1;
 	if( shdsl_issue_cmd( nl, _DSL_DOWNLOAD_END, (u8 *) &t, 1 ) )
@@ -2172,10 +2180,10 @@ sg16_sysfs_register(struct net_device *ndev)
 	// creating attributes of device in sysfs 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,21)
 	ret = sysfs_create_group(&(ndev->class_dev.kobj), &sg16_group);
-	sysfs_create_link( &(ndev->class_dev.kobj),&(nl->dev->kobj),fname);
+	ret += sysfs_create_link( &(ndev->class_dev.kobj),&(nl->dev->kobj),fname);
 #else
 	ret = sysfs_create_group(&(ndev->dev.kobj), &sg16_group);
-	sysfs_create_link( &(ndev->dev.kobj),&(nl->dev->kobj),fname);
+	ret += sysfs_create_link( &(ndev->dev.kobj),&(nl->dev->kobj),fname);
 #endif
 	return ret;
 }

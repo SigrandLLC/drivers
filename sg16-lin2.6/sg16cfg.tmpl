@@ -217,8 +217,8 @@ while [ ! -z $1 ]; do
 	    break
 	fi
 	if [ $2 = "auto" ]; then
-	    echo 1 > autobaud
-	    chk=`cat autobaud`
+	    echo 1 > autob
+	    chk=`cat autob`
 	    if [ $chk != "auto" ]; then
 		echo $0": warning: this firmware not support auto line rate"
 	    fi
@@ -246,7 +246,7 @@ while [ ! -z $1 ]; do
 		echo $0": rate value is missing"
 	        break
 	    fi
-	    echo 0 > autobaud
+	    echo 0 > autob
 	    echo $2 > rate
 	    shift
 	fi
